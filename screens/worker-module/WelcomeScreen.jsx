@@ -1,3 +1,4 @@
+// src/screens/worker-module/WelcomeScreen.jsx
 import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
@@ -15,13 +16,17 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
-const WelcomeScreen = ({ onStart, route, onLogout }) => {
-  const navigation = useNavigation();
-  const { userData } = route?.params || {};
+const WelcomeScreen = ({ onStart, onLogout, userData }) => {
+  // Debug logs
+  console.log('🟡 WelcomeScreen - Props received:', { 
+    onStart: !!onStart, 
+    onLogout, 
+    onLogoutType: typeof onLogout,
+    userData 
+  });
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -75,7 +80,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
       }),
     ]).start();
 
-    // Step animations - staggered entrance with bounce
+    // Step animations
     Animated.stagger(150, stepAnims.map(anim => 
       Animated.spring(anim, {
         toValue: 1,
@@ -85,7 +90,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
       })
     )).start();
 
-    // Complex SOS animation with pulse and scale
+    // SOS animation
     Animated.loop(
       Animated.parallel([
         Animated.sequence([
@@ -119,7 +124,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
       ])
     ).start();
 
-    // Subtle rotation animation for SOS icon
+    // Rotation animation
     Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
@@ -166,6 +171,10 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
   };
 
   const handleLogout = () => {
+    console.log('🔴 Logout button pressed');
+    console.log('🔴 onLogout function:', onLogout);
+    console.log('🔴 onLogout type:', typeof onLogout);
+    
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -176,7 +185,18 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
           style: 'destructive',
           onPress: () => {
             setMenuVisible(false);
-            onLogout();
+            // Check if onLogout is a function before calling
+            if (typeof onLogout === 'function') {
+              console.log('✅ Calling onLogout function');
+              onLogout();
+            } else {
+              console.error('❌ onLogout is not a function:', onLogout);
+              Alert.alert(
+                'Error', 
+                'Logout function not available. Please restart the app.',
+                [{ text: 'OK' }]
+              );
+            }
           },
         },
       ]
@@ -206,7 +226,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a237e" />
 
-      {/* Enhanced Side Menu */}
+      {/* Side Menu */}
       <Animated.View style={[styles.menuContainer, { transform: [{ translateX: menuAnim }] }]}>
         <LinearGradient
           colors={['#ffffff', '#f8f9ff']}
@@ -227,7 +247,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
                   {userData?.name || 'Worker User'}
                 </Text>
                 <Text style={styles.menuProfileEmail}>
-                  {userData?.employeeId || 'worker'}@essel.com
+                  {userData?.email || 'worker@essel.com'}
                 </Text>
               </View>
             </View>
@@ -290,7 +310,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
           transform: [{ translateY: slideUpAnim }]
         }
       ]}>
-        {/* Enhanced Header with Glassmorphism */}
+        {/* Header */}
         <LinearGradient
           colors={['#030e8b', '#030e8b']}
           start={{ x: 0, y: 0 }}
@@ -323,7 +343,6 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
             <Text style={styles.appName}>SafeReport</Text>
           </View>
           
-          {/* Empty view for spacing - removed notification badge */}
           <View style={{ width: 40 }} />
         </LinearGradient>
 
@@ -340,7 +359,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
             </Text>
           </View>
 
-          {/* Enhanced SOS Emergency Button */}
+          {/* SOS Emergency Button */}
           <View style={styles.sosContainer}>
             <Animated.View style={[
               styles.sosOuterRing,
@@ -380,7 +399,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
             </Animated.View>
           </View>
 
-          {/* Enhanced Steps Section */}
+          {/* Steps Section */}
           <View style={styles.stepsSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Report Steps</Text>
@@ -431,7 +450,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
           </View>
         </ScrollView>
 
-        {/* Enhanced Start Report Button */}
+        {/* Start Report Button */}
         <Animated.View style={[
           styles.footer,
           {
@@ -462,7 +481,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
         </Animated.View>
       </Animated.View>
 
-      {/* Enhanced Overlay */}
+      {/* Overlay */}
       {menuVisible && (
         <TouchableOpacity 
           style={styles.overlay}
@@ -474,6 +493,7 @@ const WelcomeScreen = ({ onStart, route, onLogout }) => {
   );
 };
 
+// Keep all your existing styles here
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -485,7 +505,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 120,
   },
-  // Enhanced Header Styles
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -539,7 +558,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.5,
   },
-  // Welcome Section
   welcomeSection: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -560,7 +578,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
   },
-  // Enhanced SOS Button
   sosContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -605,7 +622,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.9,
   },
-  // Steps Section
   stepsSection: {
     marginTop: 20,
     marginBottom: 20,
@@ -621,11 +637,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: '#1a237e',
-    fontWeight: '600',
   },
   stepsContainer: {
     flexDirection: 'row',
@@ -662,7 +673,6 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
-  // Enhanced Footer
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -693,7 +703,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  // Enhanced Menu Styles
   menuContainer: {
     position: 'absolute',
     top: 0,

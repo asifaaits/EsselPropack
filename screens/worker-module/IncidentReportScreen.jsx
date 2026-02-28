@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/screens/worker-module/IncidentReportScreen.jsx
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import { IncidentProvider, useIncident } from './context/IncidentContext';
 import WelcomeScreen from './WelcomeScreen';
@@ -9,10 +10,15 @@ import DetailsScreen from './DetailsScreen';
 import ReviewScreen from './ReviewScreen';
 import SuccessScreen from './SuccessScreen';
 
-const IncidentReportContent = ({ navigation, onLogout }) => {
-
+const IncidentReportContent = ({ navigation, onLogout, userData }) => {
   const { currentStep, setCurrentStep, resetIncident } = useIncident();
   const [showWelcome, setShowWelcome] = useState(true);
+
+  console.log('🔵 IncidentReportContent - Props received:', { 
+    onLogoutExists: !!onLogout,
+    onLogoutType: typeof onLogout,
+    userDataExists: !!userData 
+  });
 
   const handleStart = () => {
     setShowWelcome(false);
@@ -20,12 +26,10 @@ const IncidentReportContent = ({ navigation, onLogout }) => {
   };
 
   const goToNextStep = () => {
-    console.log('Going to next step. Current:', currentStep);
     setCurrentStep(prev => Math.min(prev + 1, 6));
   };
 
   const goToPreviousStep = () => {
-    console.log('Going to previous step. Current:', currentStep);
     if (currentStep === 1) {
       setShowWelcome(true);
       setCurrentStep(1);
@@ -45,67 +49,51 @@ const IncidentReportContent = ({ navigation, onLogout }) => {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#0F1419" />
-       <WelcomeScreen 
-  onStart={handleStart}
-  onLogout={onLogout}   // 👈 PASS IT
-/>
-
+        <WelcomeScreen 
+          onStart={handleStart}
+          onLogout={onLogout} // Pass the onLogout function
+          userData={userData}
+        />
       </SafeAreaView>
     );
   }
 
   // Show the incident reporting flow
   const renderStep = () => {
-    console.log('Rendering step:', currentStep);
     switch (currentStep) {
       case 1:
         return (
           <CameraScreen 
             onNext={goToNextStep} 
-            onBack={() => {
-              console.log('Camera back pressed');
-              goToPreviousStep();
-            }} 
+            onBack={goToPreviousStep} 
           />
         );
       case 2:
         return (
           <LocationScreen 
             onNext={goToNextStep} 
-            onBack={() => {
-              console.log('Location back pressed');
-              goToPreviousStep();
-            }} 
+            onBack={goToPreviousStep} 
           />
         );
       case 3:
         return (
           <BodyMapScreen 
             onNext={goToNextStep} 
-            onBack={() => {
-              console.log('BodyMap back pressed');
-              goToPreviousStep();
-            }} 
+            onBack={goToPreviousStep} 
           />
         );
       case 4:
         return (
           <DetailsScreen 
             onNext={goToNextStep} 
-            onBack={() => {
-              console.log('Details back pressed');
-              goToPreviousStep();
-            }} 
+            onBack={goToPreviousStep} 
           />
         );
       case 5:
         return (
           <ReviewScreen 
             onNext={goToNextStep} 
-            onBack={() => {
-              console.log('Review back pressed');
-              goToPreviousStep();
-            }} 
+            onBack={goToPreviousStep} 
           />
         );
       case 6:
@@ -123,12 +111,21 @@ const IncidentReportContent = ({ navigation, onLogout }) => {
   );
 };
 
-const IncidentReportScreen = ({ navigation, onLogout }) => {
+const IncidentReportScreen = (props) => {
+  console.log('🟢 IncidentReportScreen - ALL PROPS:', props);
+  console.log('🟢 onLogout in props:', props.onLogout);
+  console.log('🟢 onLogout type:', typeof props.onLogout);
+  console.log('🟢 userData in props:', props.userData);
+  
+  // Destructure props for clarity
+  const { navigation, route, userData, onLogout } = props;
+  
   return (
     <IncidentProvider>
       <IncidentReportContent 
         navigation={navigation}
-        onLogout={onLogout}
+        onLogout={onLogout} // Pass directly
+        userData={userData}
       />
     </IncidentProvider>
   );

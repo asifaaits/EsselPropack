@@ -1,0 +1,28 @@
+// src/constants/colors.js
+export const COLORS = {
+  primary: '#1E3A8A',
+  primaryLight: '#3B82F6',
+  primaryDark: '#1E40AF',
+  secondary: '#059669',
+  secondaryLight: '#10B981',
+  accent: '#D97706',
+  danger: '#DC2626',
+  warning: '#F59E0B',
+  success: '#059669',
+  info: '#2563EB',
+  grey: {
+    50: '#F9FAFB',
+    100: '#F3F4F6',
+    200: '#E5E7EB',
+    300: '#D1D5DB',
+    400: '#9CA3AF',
+    500: '#6B7280',
+    600: '#4B5563',
+    700: '#374151',
+    800: '#1F2937',
+    900: '#111827',
+  },
+  white: '#FFFFFF',
+  black: '#000000',
+  overlay: 'rgba(0,0,0,0.5)',
+};

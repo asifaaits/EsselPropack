@@ -1,3 +1,4 @@
+// src/screens/LoginScreen.jsx
 import React, { useState } from 'react';
 import {
   View,
@@ -11,68 +12,79 @@ import {
   Platform,
   ScrollView,
   ImageBackground,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from './worker-module/context/AuthContext';
 
 const ESSEL_LOGO = require('../assets/logo.png');
 const BG_IMAGE = require('../assets/factory.png');
 
-const LoginScreen = ({ onLogin }) => {
-  const [employeeId, setEmployeeId] = useState('');
+const LoginScreen = ({ navigation }) => {
+  const { login, loading: authLoading } = useAuth();
+  
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showDemoDropdown, setShowDemoDropdown] = useState(false);
 
-  const handleLogin = async () => {
-    if (!employeeId.trim() || !password.trim()) {
-      setError('Please enter both Employee ID and Password');
-      return;
+  // src/screens/LoginScreen.jsx - Add this in handleLogin function
+
+const handleLogin = async () => {
+  if (!username.trim() || !password.trim()) {
+    setError('Please enter both username and password');
+    return;
+  }
+
+  setIsLoading(true);
+  setError('');
+
+  try {
+    console.log('🔐 LOGIN ATTEMPT START');
+    console.log('Username entered:', username);
+    console.log('Password entered:', password);
+    console.log('Remember me:', rememberMe);
+    
+    const result = await login(username, password, rememberMe);
+    
+    console.log('🔐 LOGIN RESULT:', result);
+    
+    if (result.success) {
+      console.log('✅ Login successful! User role:', result.user.role);
+      console.log('✅ User data:', JSON.stringify(result.user, null, 2));
+    } else {
+      console.log('❌ Login failed:', result.error);
+      setError(result.error || 'Invalid credentials');
     }
+  } catch (err) {
+    console.error('💥 Login error:', err);
+    setError('Login failed. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-    setIsLoading(true);
+  const fillDemoCredentials = (demoUser) => {
+    console.log('Filling demo credentials for:', demoUser.role);
+    setUsername(demoUser.username);
+    setPassword(demoUser.password);
+    setShowDemoDropdown(false);
+    // Clear any previous error
     setError('');
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Mock user database - In production, this would come from your backend
-const mockUsers = [
-  // Workers
-  { employeeId: 'worker123', password: 'pass123', role: 'worker', name: 'John Worker' },
-  { employeeId: 'worker456', password: 'pass123', role: 'worker', name: 'Jane Worker' },
-  { employeeId: 'w001', password: 'pass123', role: 'worker', name: 'Mike Smith' },
-  
-  // Managers
-  { employeeId: 'manager123', password: 'pass123', role: 'manager', name: 'Bob Manager' },
-  { employeeId: 'm001', password: 'pass123', role: 'manager', name: 'Sarah Johnson' },
-  
-  // Admins
-  { employeeId: 'admin123', password: 'pass123', role: 'admin', name: 'Alice Admin' },
-];
-
-// Find user in mock database
-const user = mockUsers.find(
-  u => u.employeeId === employeeId && u.password === password
-);
-
-if (user) {
-  // Successful login
-  onLogin({ 
-    employeeId: user.employeeId,
-    name: user.name,
-    role: user.role,
-    rememberMe,
-  });
-} else {
-  setError('Invalid credentials. Please check your Employee ID and Password');
-}
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
   };
+
+  // Demo users for quick login
+  const demoUsers = [
+    { role: 'Admin', username: 'admin', password: 'admin123' },
+    { role: 'Safety Officer', username: 'safety', password: 'safety123' },
+    { role: 'Supervisor', username: 'supervisor', password: 'supervisor123' },
+    { role: 'Contractor', username: 'contractor', password: 'contractor123' },
+    { role: 'Worker', username: 'worker', password: 'worker123' },
+  ];
 
   return (
     <ImageBackground source={BG_IMAGE} style={styles.background} blurRadius={3}>
@@ -102,18 +114,18 @@ if (user) {
 
               {/* Input Fields */}
               <View style={styles.inputSection}>
-                {/* Employee ID Field */}
+                {/* Username Field */}
                 <View style={styles.inputWrapper}>
                   <View style={styles.iconContainer}>
                     <Icon name="account" size={22} color="#062a72" />
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Employee ID / Username"
+                    placeholder="Username"
                     placeholderTextColor="#6886b0"
-                    value={employeeId}
+                    value={username}
                     onChangeText={(text) => {
-                      setEmployeeId(text);
+                      setUsername(text);
                       setError('');
                     }}
                     editable={!isLoading}
@@ -124,12 +136,12 @@ if (user) {
                 {/* Password Field */}
                 <View style={styles.inputWrapper}>
                   <View style={styles.iconContainer}>
-                    <Icon name="lock" size={22}color="#062a72" />
+                    <Icon name="lock" size={22} color="#062a72" />
                   </View>
                   <TextInput
                     style={styles.input}
                     placeholder="Password"
-                    placeholderTextColor="#6485b3"
+                    placeholderTextColor="#6886b0"
                     secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={(text) => {
@@ -146,7 +158,7 @@ if (user) {
                     <Icon 
                       name={showPassword ? "eye-off-outline" : "eye-outline"} 
                       size={22} 
-                   color="#062a72"
+                      color="#062a72"
                     />
                   </TouchableOpacity>
                 </View>
@@ -165,10 +177,40 @@ if (user) {
                     <Text style={styles.rememberText}>Remember me</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.forgotButton}>
-                    <Text style={styles.forgotText}>Forgot Password?</Text>
+                  <TouchableOpacity 
+                    style={styles.demoButton}
+                    onPress={() => setShowDemoDropdown(!showDemoDropdown)}
+                  >
+                    <Icon name="account-group" size={18} color="#062a72" />
+                    <Text style={styles.demoButtonText}>Demo Users</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Demo Users Dropdown */}
+                {showDemoDropdown && (
+                  <View style={styles.demoDropdown}>
+                    <Text style={styles.demoDropdownTitle}>Select a demo user:</Text>
+                    {demoUsers.map((user, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.demoUserItem}
+                        onPress={() => fillDemoCredentials(user)}
+                      >
+                        <View style={styles.demoUserRole}>
+                          <Text style={styles.demoUserRoleText}>{user.role}</Text>
+                        </View>
+                        <View style={styles.demoUserDetails}>
+                          <Text style={styles.demoUserText}>
+                            <Text style={{ fontWeight: '600' }}>Username:</Text> {user.username}
+                          </Text>
+                          <Text style={styles.demoUserText}>
+                            <Text style={{ fontWeight: '600' }}>Password:</Text> {user.password}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
 
                 {/* Error Message */}
                 {error ? (
@@ -180,19 +222,19 @@ if (user) {
 
                 {/* Login Button */}
                 <TouchableOpacity
-                  style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                  style={[styles.loginButton, (isLoading || authLoading) && styles.loginButtonDisabled]}
                   onPress={handleLogin}
-                  disabled={isLoading}
+                  disabled={isLoading || authLoading}
                   activeOpacity={0.8}
                 >
-                  {isLoading ? (
+                  {isLoading || authLoading ? (
                     <View style={styles.loadingContainer}>
-                      <Icon name="loading" size={20} color="#fff" />
-                      <Text style={styles.loginText}>PROCESSING...</Text>
+                      <ActivityIndicator color="#fff" size="small" />
+                      <Text style={styles.loginText}>LOGGING IN...</Text>
                     </View>
                   ) : (
                     <>
-                      <Text style={styles.loginText}>LOGIN TO DASHBOARD</Text>
+                      <Text style={styles.loginText}>LOGIN</Text>
                       <Icon name="arrow-right" size={20} color="#fff" style={styles.buttonIcon} />
                     </>
                   )}
@@ -211,8 +253,6 @@ if (user) {
     </ImageBackground>
   );
 };
-
-export default LoginScreen;
 
 const styles = StyleSheet.create({
   background: {
@@ -244,7 +284,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
-    backdropFilter: 'blur(10px)',
   },
   header: {
     alignItems: 'center',
@@ -257,7 +296,6 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 28,
-      fontStyle:"bold",
     fontWeight: '700',
     color: '#013271',
     marginBottom: 3,
@@ -265,10 +303,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-     color: '#013271',
-     fontStyle:"bold",
-        fontWeight: '500',
-
+    color: '#013271',
+    fontWeight: '500',
     letterSpacing: 0.3,
   },
   inputSection: {
@@ -299,7 +335,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   eyeIcon: {
-   color: '#013271',
+    padding: 8,
   },
   optionsRow: {
     flexDirection: 'row',
@@ -331,16 +367,63 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
   },
-  forgotButton: {
+  demoButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
   },
-  forgotText: {
+  demoButtonText: {
     fontSize: 14,
-   color: '#032e65',
-   marginLeft:10,
+    color: '#fff',
     fontWeight: '600',
-    marginRight: 4,
+  },
+  demoDropdown: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  demoDropdownTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#013271',
+    marginBottom: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  demoUserItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  demoUserRole: {
+    marginBottom: 2,
+  },
+  demoUserRoleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#013271',
+  },
+  demoUserDetails: {
+    marginLeft: 4,
+  },
+  demoUserText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -374,11 +457,12 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   loginButtonDisabled: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
   loginText: {
     color: '#fff',
@@ -395,14 +479,16 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    fontWeight:600,
-    color: 'rgba(2, 26, 61, 0.6)',
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     marginBottom: 4,
   },
   versionText: {
-     fontWeight:600,
+    fontWeight: '600',
     fontSize: 11,
-    color: 'rgba(2, 26, 61, 0.6)',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 });
+
+export default LoginScreen;

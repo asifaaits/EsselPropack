@@ -13,22 +13,22 @@ import {
   SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useAuth } from '../screens/worker-module/context/AuthContext'; // Import useAuth
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallScreen = width < 375;
 
 // Update this path based on your actual logo location
-// Try different paths if this doesn't work:
-// const ESSEL_LOGO = require('../../assets/logo.jpg');
-// const ESSEL_LOGO = require('../../../assets/logo.jpg');
-// const ESSEL_LOGO = require('./assets/logo.jpg');
 const ESSEL_LOGO = require('../assets/logo.png');
 
 const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  
+  // Get real user data from AuthContext
+  const { user } = useAuth();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -66,6 +66,39 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
       navigation.navigate(route);
     }
     closeMenu();
+  };
+
+  // Get user display name - handle different possible formats
+  const getUserDisplayName = () => {
+    if (!user) return 'Guest';
+    return user.name || user.username || user.email || 'User';
+  };
+
+  // Get user role with proper formatting
+  const getUserRole = () => {
+    if (!user || !user.role) return 'User';
+    
+    // Format role string (e.g., "SUPERVISOR" -> "Supervisor")
+    const roleStr = user.role.toString();
+    return roleStr.charAt(0).toUpperCase() + roleStr.slice(1).toLowerCase();
+  };
+
+  // Get user email
+  const getUserEmail = () => {
+    if (!user) return 'Not logged in';
+    return user.email || `${user.username || 'user'}@esselpropack.com`;
+  };
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    const name = getUserDisplayName();
+    if (name === 'Guest') return 'G';
+    
+    const nameParts = name.split(' ');
+    if (nameParts.length >= 2) {
+      return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -134,13 +167,9 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
             activeOpacity={0.7}
           >
             <Icon name="person" size={24} color="#11269C" />
-           
           </TouchableOpacity>
-
-          
         </View>
 
-      
         {/* Notifications Dropdown */}
         {showNotifications && (
           <View style={styles.dropdown}>
@@ -180,17 +209,17 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
           </View>
         )}
 
-        {/* User Menu Dropdown */}
-        {showUserMenu && (
+        {/* User Menu Dropdown - Now with real user data */}
+        {showUserMenu && user && (
           <View style={styles.userDropdown}>
             <View style={styles.userInfo}>
               <View style={styles.userAvatar}>
-                <Icon name="person" size={32} color="#11269C" />
+                <Text style={styles.userInitials}>{getUserInitials()}</Text>
               </View>
               <View style={styles.userDetails}>
-                <Text style={styles.userName}>John Doe</Text>
-                <Text style={styles.userRole}>Safety Manager</Text>
-                <Text style={styles.userEmail}>john.doe@esselpropack.com</Text>
+                <Text style={styles.userName}>{getUserDisplayName()}</Text>
+                <Text style={styles.userRole}>{getUserRole()}</Text>
+                <Text style={styles.userEmail}>{getUserEmail()}</Text>
               </View>
             </View>
             <View style={styles.userMenuItems}>
@@ -229,9 +258,8 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: 'rgba(1, 4, 54, 2)',
   },
-
   navbar: {
-    marginTop:25,
+    marginTop: 25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -328,9 +356,6 @@ const styles = StyleSheet.create({
     borderColor: '#e8eaf6',
     position: 'relative',
   },
-  dropdownArrow: {
-    marginLeft: 4,
-  },
   notificationBadge: {
     position: 'absolute',
     top: 2,
@@ -348,129 +373,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
-  },
-  menuButton: {
-    padding: 8,
-    marginLeft: 8,
-    backgroundColor: '#f5f7ff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e8eaf6',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  mobileMenu: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '85%',
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-  },
-  mobileMenuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#f9faff',
-  },
-  mobileLogoContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#f5f7ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#e8eaf6',
-  },
-  mobileLogo: {
-    width: 45,
-    height: 45,
-  },
-  mobileBrandContainer: {
-    flex: 1,
-  },
-  mobileBrand: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#11269C',
-    marginBottom: 2,
-  },
-  mobileTagline: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  closeButton: {
-    padding: 8,
-    backgroundColor: '#f5f7ff',
-    borderRadius: 8,
-  },
-  mobileMenuItems: {
-    maxHeight: 500,
-  },
-  userInfoMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f9faff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  userAvatarMobile: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#e8eaf6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  userDetailsMobile: {
-    flex: 1,
-  },
-  userNameMobile: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
-  },
-  userRoleMobile: {
-    fontSize: 14,
-    color: '#666',
-  },
-  mobileMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
-  mobileMenuIconContainer: {
-    width: 40,
-    alignItems: 'center',
-  },
-  mobileMenuText: {
-    fontSize: 16,
-    color: '#333',
-    flex: 1,
-    marginLeft: 8,
-  },
-  mobileMenuDivider: {
-    height: 1,
-    backgroundColor: '#f0f0f0',
-    marginVertical: 8,
-  },
-  logoutText: {
-    color: '#d32f2f',
-    fontWeight: '600',
   },
   dropdown: {
     position: 'absolute',
@@ -585,10 +487,15 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#e8eaf6',
+    backgroundColor: '#11269C',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  userInitials: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
   userDetails: {
     flex: 1,
@@ -630,6 +537,10 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
     fontWeight: '500',
+  },
+  logoutText: {
+    color: '#d32f2f',
+    fontWeight: '600',
   },
 });
 

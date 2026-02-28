@@ -1,3 +1,4 @@
+// src/screens/LandingPage.jsx
 import React from 'react';
 import {
   View,
@@ -11,41 +12,30 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../screens/worker-module/context/AuthContext';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const isSmallScreen = width < 375;
-const isMediumScreen = width >= 375 && width < 768;
-const isTablet = width >= 768;
 
-// Only Safety Portal module for landing page
-const safetyData = [
-  {
-    id: 1,
-    title: 'Safety Portal',
-    icon: 'shield-alt',
-    route: 'SafetyModule',
-    color: '#2E7D32',
-    bgColor: 'rgba(46, 125, 50, 0.1)',
-  },
-];
-
-// All modules for Safety Portal screen (with Dashboard as first)
+// All modules with their required permissions
 const safetyPortalModules = [
   {
-    id: 7,
-    title: 'Dashboard',
-    icon: 'chart-pie',
-    route: 'SafetyDashboard',
-    color: '#6A1B9A',
-    bgColor: 'rgba(106, 27, 154, 0.1)',
-  },
-  {
-    id: 2,
-    title: 'Permit to Work',
+    id: 1,
+    title: 'Permit to Work (PTW)',
     icon: 'file-signature',
     route: 'PermitToWork',
     color: '#1976D2',
-    bgColor: 'rgba(25, 118, 210, 0.1)',
+    bgColor: 'rgba(25, 118, 210, 0.08)',
+    permission: 'ptw',
+  },
+  {
+    id: 2,
+    title: 'Safety Dashboard',
+    icon: 'chart-pie',
+    route: 'SafetyDashboard',
+    color: '#6A1B9A',
+    bgColor: 'rgba(106, 27, 154, 0.08)',
+    permission: 'dashboard',
   },
   {
     id: 3,
@@ -53,7 +43,8 @@ const safetyPortalModules = [
     icon: 'first-aid',
     route: 'IncidentManagement',
     color: '#D32F2F',
-    bgColor: 'rgba(230, 42, 42, 0.1)',
+    bgColor: 'rgba(211, 47, 47, 0.08)',
+    permission: 'incident',
   },
   {
     id: 4,
@@ -61,129 +52,62 @@ const safetyPortalModules = [
     icon: 'flask',
     route: 'ChemicalSafety',
     color: '#de5708',
-    bgColor: 'rgba(246, 114, 67, 0.1)',
+    bgColor: 'rgba(222, 87, 8, 0.08)',
+    permission: 'chemical',
   },
-{
-    id: 10,
+  {
+    id: 5,
     title: 'Audit & Inspection',
     icon: 'clipboard-check',
     route: 'AuditAndInspection',
     color: '#455A64',
-    bgColor: 'rgba(69, 90, 100, 0.1)',
+    bgColor: 'rgba(69, 90, 100, 0.08)',
+    permission: 'audit',
   },
-
   {
-    id: 8,
+    id: 6,
     title: 'CAPA',
     icon: 'check-circle',
     route: 'CapaScreen',
     color: '#00796B',
-    bgColor: 'rgba(0, 121, 107, 0.1)',
+    bgColor: 'rgba(0, 121, 107, 0.08)',
+    permission: 'capa',
   },
-   {
-    id: 5,
+  {
+    id: 7,
     title: 'Safety Training',
     icon: 'graduation-cap',
     route: 'SafetyTraining',
     color: '#FFC107',
-    bgColor: 'rgba(255, 193, 7, 0.1)',
+    bgColor: 'rgba(255, 193, 7, 0.08)',
+    permission: 'training',
   },
   {
-    id: 9,
+    id: 8,
     title: 'Reports',
     icon: 'file-alt',
     route: 'Reports',
     color: '#E64A19',
-    bgColor: 'rgba(230, 74, 25, 0.1)',
+    bgColor: 'rgba(230, 74, 25, 0.08)',
+    permission: 'report',
   },
-  
 ];
 
-// Quick action modules (all except Safety Portal) for Safety Module screen
-const quickActionModules = safetyPortalModules;
-
-const LandingPage = () => {
-  const navigation = useNavigation();
-
-  const handleCardPress = (route, title) => {
-    if (title === 'Safety Portal') {
-      navigation.navigate('SafetyModule', { module: title });
-    } else {
-      navigation.navigate(route);
-    }
-  };
-
- 
-
-  const renderCard = (item) => (
-    <TouchableOpacity
-      key={item.id}
-      style={[styles.quickCard, { backgroundColor: item.bgColor }]}
-      onPress={() => handleCardPress(item.route, item.title)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.quickCardInner}>
-        <View style={[styles.quickIconBox, { backgroundColor: item.bgColor }]}>
-          <Icon name={item.icon} size={isSmallScreen ? 22 : 26} color={item.color} />
-        </View>
-        <View style={styles.quickTextContainer}>
-          <Text style={styles.quickTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.quickSubtitle} numberOfLines={1}>Access safety tools</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView 
-        style={styles.container} 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        
-    
-
-        <View style={styles.quickGrid}>
-          {safetyData.map((item, index) => (
-            <View 
-              key={item.id} 
-              style={[
-                styles.quickCardWrapper,
-                (index % 2 === 0) && styles.quickCardEven,
-                (index % 2 === 1) && styles.quickCardOdd
-              ]}
-            >
-              {renderCard(item)}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-};
-
-// Safety Module Screen Component
+// Safety Module Screen - This is what opens when you click "Safety Portal" on the landing page
 export const SafetyModuleScreen = ({ route }) => {
-  
   const navigation = useNavigation();
-  const { module } = route.params;
+  const { hasPermission } = useAuth();
+  
+  const moduleName = route?.params?.module || 'Safety Portal';
 
-// In SafetyModuleScreen component
-const handleCardPress = (route) => {
-  console.log('🔍 Attempting to navigate to:', route);
-  console.log('📱 Available screens:', navigation.getState()?.routes.map(r => r.name));
-  try {
-    navigation.navigate(route);
-    console.log('✅ Navigation successful');
-  } catch (error) {
-    console.error('❌ Navigation error:', error);
-    alert(`Screen "${route}" not found. Check your navigation stack.`);
-  }
-};
-  const handleSOSPress = () => {
-    console.log('SOS Emergency triggered from Safety Module');
-    // Add SOS emergency logic here
+  // Filter modules based on user permissions
+  const accessibleModules = safetyPortalModules.filter(module => 
+    hasPermission(module.permission)
+  );
+
+  const handleCardPress = (routeName) => {
+    console.log('Navigating to:', routeName);
+    navigation.navigate(routeName);
   };
 
   const handleBackPress = () => {
@@ -193,183 +117,202 @@ const handleCardPress = (route) => {
   const renderCard = (item) => (
     <TouchableOpacity
       key={item.id}
-      style={[styles.quickCard, { backgroundColor: item.bgColor }]}
+      style={[styles.moduleCard, { backgroundColor: item.bgColor }]}
       onPress={() => handleCardPress(item.route)}
       activeOpacity={0.7}
     >
-      <View style={styles.quickCardInner}>
-        <View style={[styles.quickIconBox, { backgroundColor: item.bgColor }]}>
-          <Icon name={item.icon} size={isSmallScreen ? 22 : 26} color={item.color} />
-        </View>
-        <View style={styles.quickTextContainer}>
-          <Text style={styles.quickTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.quickSubtitle} numberOfLines={1}>Access safety tools</Text>
-        </View>
+      <View style={[styles.moduleIconBox, { backgroundColor: item.bgColor }]}>
+        <Icon name={item.icon} size={isSmallScreen ? 24 : 28} color={item.color} />
       </View>
+      <Text style={styles.moduleTitle} numberOfLines={2}>{item.title}</Text>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-  
-        {/* Navbar */}
-         <ScrollView 
+      <View style={styles.navbar}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <Icon name="arrow-left" size={20} color="#ecedf3" />
+        </TouchableOpacity>
+        <Text style={styles.navbarTitle}>{moduleName}</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView 
         style={styles.container} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.modulesScrollContent}
       >
-        <View style={styles.navbar}>
-          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-            <Icon name="arrow-left" size={20} color="#ecedf3" />
-          </TouchableOpacity>
-          <Text style={styles.navbarTitle}>{module}</Text>
-          <View style={styles.placeholder} />
-        </View>
-
-       
-        <View style={styles.quickGrid}>
-          {quickActionModules.map((item, index) => (
-            <View 
-              key={item.id} 
-              style={[
-                styles.quickCardWrapper,
-                (index % 2 === 0) && styles.quickCardEven,
-                (index % 2 === 1) && styles.quickCardOdd
-              ]}
-            >
-              {renderCard(item)}
-            </View>
-          ))}
-        </View>
-        </ScrollView>
+        {accessibleModules.length > 0 ? (
+          <View style={styles.modulesGrid}>
+            {accessibleModules.map((item) => renderCard(item))}
+          </View>
+        ) : (
+          <View style={styles.noAccessContainer}>
+            <Icon name="lock" size={50} color="#ccc" />
+            <Text style={styles.noAccessText}>You don't have access to any modules</Text>
+            <Text style={styles.noAccessSubtext}>Please contact your administrator</Text>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
+// Main Landing Page - Safety Portal card at top left below navbar
+const LandingPage = () => {
+  const navigation = useNavigation();
+
+  const handleSafetyPortalPress = () => {
+    navigation.navigate('SafetyModule', { module: 'Safety Portal' });
+  };
+
+  return (
+    <View style={styles.mainContainer}>
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.landingScrollContent}
+      >
+        {/* Safety Portal Card - Aligned to top left */}
+        <View style={styles.cardContainer}>
+          <TouchableOpacity
+            style={[styles.moduleCard, styles.mainModuleCard]}
+            onPress={handleSafetyPortalPress}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.moduleIconBox, styles.mainModuleIcon]}>
+              <Icon name="shield-alt" size={32} color="#2E7D32" />
+            </View>
+            <Text style={[styles.moduleTitle, styles.mainModuleTitle]}>Safety Portal</Text>
+            <Text style={styles.mainModuleSubtitle}>Access all safety modules</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fc',
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5fa67',
+    backgroundColor: '#f8f9fc',
   },
   container: {
     flex: 1,
   },
-  scrollContent: {
-    marginBottom:20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-  },
-heroSection: {
-    backgroundColor: '#11269C',
-    padding: isSmallScreen ? 20 : 28,
-    paddingTop: Platform.OS === 'ios' ? 16 : 28,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  heroContent: {
-    marginBottom: isSmallScreen ? 20 : 28,
-  },
-  heroTitle: {
-    fontSize: isSmallScreen ? 24 : isTablet ? 34 : 30,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 12,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-    lineHeight: isSmallScreen ? 30 : 36,
-  },
-  heroSubtitle: {
-    fontSize: isSmallScreen ? 15 : 17,
-    color: 'rgba(255, 255, 255, 0.95)',
-    textAlign: 'center',
-    lineHeight: isSmallScreen ? 22 : 24,
-    fontWeight: '500',
-  },
-
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: 15,
-    marginTop: 10,
-  },
-  quickCardWrapper: {
-    width: '50%',
-    padding: 6,
-  },
-  quickCardEven: {
-    paddingRight: 7,
-  },
-  quickCardOdd: {
-    paddingLeft: 7,
-  },
-  quickCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: isSmallScreen ? 16 : 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    height: isSmallScreen ? 140 : 160,
-    justifyContent: 'center',
-  },
-  quickCardInner: {
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  quickIconBox: {
-    width: isSmallScreen ? 40 : 50,
-    height: isSmallScreen ? 40 : 50,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 233, 12, 0.05)',
-  },
-  quickTextContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  quickTitle: {
-    fontSize: isSmallScreen ? 16 : 18,
-    fontWeight: '700',
-    color: '#1a237e',
-    textAlign: 'center',
-    marginBottom: 4,
-    lineHeight: isSmallScreen ? 20 : 22,
-  },
-  quickSubtitle: {
-    fontSize: isSmallScreen ? 13 : 14,
-    color: '#666',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  // Navbar styles for Safety Module
   navbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height:70,
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop:20,
+    paddingTop: Platform.OS === 'android' ? 20 : 12,
     backgroundColor: '#031071',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   backButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   navbarTitle: {
-    fontSize: isSmallScreen ? 18 : 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ecedf3',
   },
   placeholder: {
     width: 40,
   },
-  sosSection: {
+  landingScrollContent: {
     padding: 20,
+    paddingTop: 20,
+  },
+  modulesScrollContent: {
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  cardContainer: {
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+
+  // Updated modules grid for perfect 2-column layout
+  modulesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginHorizontal: 1,
+    marginVertical:5, // Compensate for card padding
+  },
+  moduleCard: {
+    width: '48%', // Slightly less than 50% to account for margin
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    marginBottom: 16,
+    marginHorizontal: '0%', // Add small horizontal margin
+  },
+  mainModuleCard: {
+    backgroundColor: 'rgba(3, 126, 10, 0.09)', // Light green background
+    width: '50%',
+    maxWidth: 300,
+    height:160,
+    alignSelf: 'flex-start',
+    marginHorizontal: 0, // Reset margin for main card
+  },
+  moduleIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mainModuleIcon: {
+    backgroundColor: 'rgba(3, 126, 10, 0.15)',
+  },
+  moduleTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a237e',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  mainModuleTitle: {
+    color: '#1a237e',
+    fontSize: 18,
+    marginBottom: 8,
+  },
+  mainModuleSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+  },
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    marginTop: 100,
+  },
+  noAccessText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  noAccessSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
 
