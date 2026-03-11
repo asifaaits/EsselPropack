@@ -9,14 +9,12 @@ import {
   SafeAreaView,
   Platform,
   ActivityIndicator,
-  FlatList,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
-const isSmallScreen = width < 375;
-const isMediumScreen = width >= 375 && width < 768;
+const chartWidth = width - 40;
 
 // Lazy load heavy chart components
 const BarChart = lazy(() => import('react-native-chart-kit').then(module => ({ default: module.BarChart })));
@@ -32,435 +30,554 @@ const ChartLoader = () => (
 
 const SafetyDashboard = () => {
   const navigation = useNavigation();
-  const [currentDate, setCurrentDate] = useState('');
-  const [chartsReady, setChartsReady] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    ptw: true,
-    chemical: true,
-    training: true,
-    incident: true,
-  });
-  const [selectedLocation, setSelectedLocation] = useState('all');
 
-  // Get current date on component mount
-  useEffect(() => {
-    const date = new Date();
-    const options = { day: '2-digit', month: 'short', year: 'numeric' };
-    const formattedDate = date.toLocaleDateString('en-US', options).toUpperCase().replace(',', '');
-    setCurrentDate(formattedDate);
-    
-    // Mark charts as ready after a tiny delay to ensure UI renders first
-    setTimeout(() => setChartsReady(true), 100);
-  }, []);
-
-  // ========== DATA STRUCTURES (Enhanced from web version) ==========
-  const ptwData = {
-    total: 24,
-    active: 8,
-    pending: 6,
-    completed: 7,
-    cancelled: 3,
-    work_types: {
-      "Hot Work": 5,
-      "Height Work": 4,
-      Electrical: 6,
-      "Confined Space": 3,
-      "Hazardous Material": 2,
-      Others: 4,
-    },
-    departments: {
-      Maintenance: 8,
-      Electrical: 6,
-      Civil: 4,
-      Process: 3,
-      Facilities: 3,
-    },
-    locations: {
-      "Main Plant - Building A": {
-        total: 8,
-        active: 3,
-        pending: 2,
-        completed: 2,
-        cancelled: 1,
-        peopleCount: 45,
-        supervisor: "John Smith",
-        workTypes: {
-          "Hot Work": 2,
-          "Electrical": 3,
-          "Height Work": 2,
-          "Others": 1
-        }
-      },
-      "Warehouse - Section B": {
-        total: 6,
-        active: 2,
-        pending: 1,
-        completed: 2,
-        cancelled: 1,
-        peopleCount: 28,
-        supervisor: "Sarah Johnson",
-        workTypes: {
-          "Height Work": 2,
-          "Confined Space": 1,
-          "Electrical": 2,
-          "Others": 1
-        }
-      },
-      "Administrative Block": {
-        total: 3,
-        active: 1,
-        pending: 1,
-        completed: 1,
-        cancelled: 0,
-        peopleCount: 15,
-        supervisor: "Mike Wilson",
-        workTypes: {
-          "Electrical": 1,
-          "Others": 2
-        }
-      },
-      "Production Line 2": {
-        total: 4,
-        active: 1,
-        pending: 1,
-        completed: 1,
-        cancelled: 1,
-        peopleCount: 32,
-        supervisor: "Emily Davis",
-        workTypes: {
-          "Hot Work": 2,
-          "Hazardous Material": 1,
-          "Others": 1
-        }
-      },
-      "Maintenance Workshop": {
-        total: 3,
-        active: 1,
-        pending: 1,
-        completed: 1,
-        cancelled: 0,
-        peopleCount: 18,
-        supervisor: "Robert Brown",
-        workTypes: {
-          "Confined Space": 2,
-          "Others": 1
-        }
-      }
-    },
-  };
-
-  const incidentData = {
-    total: 18,
-    open: 5,
-    investigating: 4,
-    closed: 9,
-    severity: {
-      Critical: 2,
-      Major: 5,
-      Minor: 8,
-      "Near Miss": 3,
-    },
-    types: {
-      Injury: 7,
-      "Near Miss": 4,
-      "Property Damage": 3,
-      Vehicle: 2,
-      Environmental: 2,
-    },
-    monthly_trend: [3, 2, 4, 2, 3, 4],
-  };
-
-  const auditData = {
-    total: 15,
-    open: 4,
-    investigating: 3,
-    closed: 8,
-    scores: [92, 78, 85, 95, 88, 82, 90, 75, 88, 92, 85, 79, 91, 87, 83],
-    avgScore: 87,
-  };
-
-  const capaData = {
-    total: 12,
-    pending: 5,
-    verification: 3,
-    closed: 4,
-    priority: {
-      High: 4,
-      Medium: 6,
-      Low: 2,
-    },
-  };
-
-  const chemicalData = {
-    total: 45,
-    active: 38,
-    expired: 5,
-    disposed: 2,
-    hazards: {
-      Flammable: 12,
-      Toxic: 8,
-      Corrosive: 10,
-      Oxidizing: 5,
-      Explosive: 3,
-      Other: 7,
-    },
-    locations: {
-      "Lab-01": 15,
-      "Lab-02": 12,
-      "Storage-03": 18,
-    },
-  };
-
-  const trainingData = {
-    total_courses: 8,
-    completed: 3,
-    in_progress: 4,
-    not_started: 1,
-    completion_rate: 68,
-    avg_score: 87,
-    monthly_completions: [12, 15, 18, 14, 20, 22],
-  };
-
-  // Stats data with navigation routes
+  // Stats data
   const statsData = [
+    { id: 1, title: 'ACTIVE PTW', value: '28', icon: 'file-signature', color: '#11269C', bgColor: '#EEF2FF' },
+    { id: 2, title: 'OPEN INCIDENTS', value: '14', icon: 'exclamation-circle', color: '#DC2626', bgColor: '#FEE2E2' },
+    { id: 3, title: 'CAPA IN PROGRESS', value: '9', icon: 'check-double', color: '#F59E0B', bgColor: '#FEF3C7' },
+    { id: 4, title: 'CHEMICALS', value: '47', icon: 'flask', color: '#10B981', bgColor: '#D1FAE5' },
+  ];
+
+  // Location Distribution Data
+  const locationData = [
+    { name: 'Main Plant - Building A', value: 8, color: '#10B981' },
+    { name: 'Warehouse - Section B', value: 6, color: '#3B82F6' },
+    { name: 'Administrative Block', value: 3, color: '#F59E0B' },
+    { name: 'Production Line 2', value: 4, color: '#EF4444' },
+    { name: 'Maintenance Workshop', value: 3, color: '#8B5CF6' },
+  ];
+
+  // People Count Data
+  const peopleCountData = [
+    { location: 'Main Plant - Building A', count: 45 },
+    { location: 'Warehouse - Section B', count: 28 },
+    { location: 'Administrative Block', count: 15 },
+    { location: 'Production Line 2', count: 32 },
+    { location: 'Maintenance Workshop', count: 18 },
+  ];
+
+  // PTW Status Data
+  const ptwStatusData = [
+    { name: 'Active', value: 8, color: '#10B981' },
+    { name: 'Pending', value: 6, color: '#F59E0B' },
+    { name: 'Completed', value: 7, color: '#11269C' },
+    { name: 'Cancelled', value: 3, color: '#DC2626' },
+  ];
+
+  // Work Types Data
+  const workTypesData = [
+    { name: 'Hot Work', value: 5, color: '#FF6B35' },
+    { name: 'Height Work', value: 4, color: '#DC2626' },
+    { name: 'Electrical', value: 6, color: '#F59E0B' },
+    { name: 'Confined Space', value: 3, color: '#3B82F6' },
+    { name: 'Hazardous Material', value: 2, color: '#8B5CF6' },
+    { name: 'Others', value: 4, color: '#6B7280' },
+  ];
+
+  // Work Types by Location Data
+  const workTypesByLocation = [
     { 
-      id: 1, 
-      route: "PermitToWork",
-      title: 'Active PTW', 
-      value: ptwData.active.toString(), 
-      icon: 'file-signature', 
-      color: '#11269C', 
-      change: '+12%',
-      bgColor: 'rgba(17, 38, 156, 0.1)',
+      location: 'Main Plant - Building A', 
+      hotWork: 2, 
+      heightWork: 2, 
+      electrical: 3, 
+      confined: 0, 
+      hazardous: 0, 
+      others: 1,
+      total: 8
     },
     { 
-      id: 2, 
-      route: "IncidentManagement",
-      title: 'Open Incidents', 
-      value: (incidentData.open + incidentData.investigating).toString(), 
-      icon: 'exclamation-circle', 
-      color: '#dc2626', 
-      change: '-5%',
-      bgColor: 'rgba(220, 38, 38, 0.1)',
+      location: 'Warehouse - Section B', 
+      hotWork: 0, 
+      heightWork: 2, 
+      electrical: 2, 
+      confined: 1, 
+      hazardous: 0, 
+      others: 1,
+      total: 6
     },
     { 
-      id: 3, 
-      route: "CapaScreen",
-      title: 'CAPA in Progress', 
-      value: (capaData.pending + capaData.verification).toString(), 
-      icon: 'check-double', 
-      color: '#f59e0b', 
-      change: '+3%',
-      bgColor: 'rgba(245, 158, 11, 0.1)',
+      location: 'Administrative Block', 
+      hotWork: 0, 
+      heightWork: 0, 
+      electrical: 1, 
+      confined: 0, 
+      hazardous: 0, 
+      others: 2,
+      total: 3
     },
     { 
-      id: 4, 
-      route: "ChemicalSafety",
-      title: 'Chemicals', 
-      value: chemicalData.active.toString(), 
-      icon: 'flask', 
-      color: '#10b981', 
-      change: '+8%',
-      bgColor: 'rgba(16, 185, 129, 0.1)',
+      location: 'Production Line 2', 
+      hotWork: 2, 
+      heightWork: 0, 
+      electrical: 0, 
+      confined: 0, 
+      hazardous: 1, 
+      others: 1,
+      total: 4
+    },
+    { 
+      location: 'Maintenance Workshop', 
+      hotWork: 0, 
+      heightWork: 0, 
+      electrical: 0, 
+      confined: 2, 
+      hazardous: 0, 
+      others: 1,
+      total: 3
     },
   ];
 
-  // Location data for dropdown
-  const locations = ['All Locations', ...Object.keys(ptwData.locations)];
-
-  // Chart configuration
-  const chartConfig = {
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(17, 38, 156, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: {
-      borderRadius: 16,
+  // PTW Status by Location Data
+  const statusByLocation = [
+    { 
+      location: 'Main Plant - Building A', 
+      active: 3, 
+      pending: 2, 
+      completed: 2, 
+      cancelled: 1,
+      total: 8
     },
-    propsForDots: {
-      r: '6',
-      strokeWidth: '2',
-      stroke: '#11269C',
+    { 
+      location: 'Warehouse - Section B', 
+      active: 2, 
+      pending: 1, 
+      completed: 2, 
+      cancelled: 1,
+      total: 6
     },
-    propsForLabels: {
-      fontSize: 10,
-      fontWeight: '600',
+    { 
+      location: 'Administrative Block', 
+      active: 1, 
+      pending: 1, 
+      completed: 1, 
+      cancelled: 0,
+      total: 3
     },
-  };
-
-  // Prepare chart data
-  const ptwStatusPieData = [
-    { name: 'Active', population: ptwData.active, color: '#10b981', legendFontColor: '#374151', legendFontSize: 12 },
-    { name: 'Pending', population: ptwData.pending, color: '#f59e0b', legendFontColor: '#374151', legendFontSize: 12 },
-    { name: 'Completed', population: ptwData.completed, color: '#11269C', legendFontColor: '#374151', legendFontSize: 12 },
-    { name: 'Cancelled', population: ptwData.cancelled, color: '#dc2626', legendFontColor: '#374151', legendFontSize: 12 },
+    { 
+      location: 'Production Line 2', 
+      active: 1, 
+      pending: 1, 
+      completed: 1, 
+      cancelled: 1,
+      total: 4
+    },
+    { 
+      location: 'Maintenance Workshop', 
+      active: 1, 
+      pending: 1, 
+      completed: 1, 
+      cancelled: 0,
+      total: 3
+    },
   ];
 
-  const workTypeData = Object.keys(ptwData.work_types).map((key, index) => ({
-    name: key,
-    population: ptwData.work_types[key],
-    color: ['#ff6b35', '#dc2626', '#f59e0b', '#3b82f6', '#8b5cf6', '#6b7280'][index],
-    legendFontColor: '#374151',
-    legendFontSize: 12,
-  }));
-
-  const locationPieData = Object.keys(ptwData.locations).map((key, index) => ({
-    name: key.length > 15 ? key.substring(0, 12) + '...' : key,
-    population: ptwData.locations[key].total,
-    color: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'][index],
-    legendFontColor: '#374151',
-    legendFontSize: 12,
-  }));
-
-  const hazardData = Object.keys(chemicalData.hazards).map((key, index) => ({
-    name: key,
-    population: chemicalData.hazards[key],
-    color: ['#ff6b35', '#dc2626', '#f59e0b', '#3b82f6', '#8b5cf6', '#6b7280'][index],
-    legendFontColor: '#374151',
-    legendFontSize: 12,
-  }));
-
-  const incidentTypeData = Object.keys(incidentData.types).map((key, index) => ({
-    name: key,
-    population: incidentData.types[key],
-    color: ['#dc2626', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6'][index],
-    legendFontColor: '#374151',
-    legendFontSize: 12,
-  }));
-
-  const trainingCourseData = [
-    { name: 'Completed', population: trainingData.completed, color: '#10b981', legendFontColor: '#374151', legendFontSize: 12 },
-    { name: 'In Progress', population: trainingData.in_progress, color: '#f59e0b', legendFontColor: '#374151', legendFontSize: 12 },
-    { name: 'Not Started', population: trainingData.not_started, color: '#6b7280', legendFontColor: '#374151', legendFontSize: 12 },
+  // Chemical Hazard Data - EXACT values matching screenshot
+  const chemicalHazardData = [
+    { name: 'Flammable', value: 12, color: '#FF6B35' },
+    { name: 'Toxic', value: 8, color: '#DC2626' },
+    { name: 'Corrosive', value: 10, color: '#F59E0B' },
+    { name: 'Oxidizing', value: 5, color: '#3B82F6' },
+    { name: 'Explosive', value: 3, color: '#8B5CF6' },
+    { name: 'Other', value: 7, color: '#6B7280' },
   ];
 
-  const locationData = {
-    labels: Object.keys(chemicalData.locations),
-    datasets: [{ data: Object.values(chemicalData.locations) }],
-  };
+  // Chemical Location Data - EXACT values matching screenshot
+  const chemicalLocationData = [
+    { name: 'Lab-01', value: 15, color: '#10B981' },
+    { name: 'Lab-02', value: 12, color: '#3B82F6' },
+    { name: 'Storage-03', value: 18, color: '#F59E0B' },
+  ];
 
-  const deptData = {
-    labels: Object.keys(ptwData.departments),
-    datasets: [{ data: Object.values(ptwData.departments) }],
-  };
+  // Training Data
+  const trainingCompletion = 68;
+  const courseStatusData = [
+    { name: 'Completed', value: 3, color: '#10B981' },
+    { name: 'In Progress', value: 4, color: '#F59E0B' },
+    { name: 'Not Started', value: 1, color: '#6B7280' },
+  ];
+  const monthlyCompletions = [12, 15, 18, 14, 20, 22];
 
-  const capaPriorityData = {
-    labels: Object.keys(capaData.priority),
-    datasets: [{ data: Object.values(capaData.priority) }],
-  };
+  // Department Data
+  const departmentData = [
+    { name: 'Maintenance', value: 8, color: '#11269C' },
+    { name: 'Electrical', value: 6, color: '#4A90E2' },
+    { name: 'Civil', value: 4, color: '#10B981' },
+    { name: 'Process', value: 3, color: '#F59E0B' },
+    { name: 'Facilities', value: 3, color: '#DC2626' },
+  ];
 
-  // Progress Bar Component
-  const ProgressBar = ({ progress, color, height = 8, showPercentage = true }) => (
-    <View style={styles.progressBarContainer}>
-      <View style={[styles.progressBar, { height }]}>
-        <View 
-          style={[
-            styles.progressFill, 
-            { width: `${progress}%`, backgroundColor: color }
-          ]} 
-        />
-      </View>
-      {showPercentage && <Text style={styles.progressText}>{progress}%</Text>}
-    </View>
-  );
+  // Incident Types Data
+  const incidentTypesData = [
+    { name: 'Injury', value: 7, color: '#DC2626' },
+    { name: 'Near Miss', value: 4, color: '#F59E0B' },
+    { name: 'Property Damage', value: 3, color: '#3B82F6' },
+    { name: 'Vehicle', value: 2, color: '#10B981' },
+    { name: 'Environmental', value: 2, color: '#8B5CF6' },
+  ];
 
-  // Section Header Component
-  const SectionHeader = ({ title, icon, badge, section, color = '#11269C' }) => (
-    <TouchableOpacity 
-      style={styles.sectionHeader}
-      onPress={() => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))}
-      activeOpacity={0.7}
-    >
-      <View style={styles.sectionHeaderLeft}>
-        <Icon name={icon} size={18} color={color} />
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      <View style={styles.sectionHeaderRight}>
-        {badge && (
-          <View style={[styles.sectionBadge, { backgroundColor: color + '20' }]}>
-            <Text style={[styles.sectionBadgeText, { color }]}>{badge}</Text>
-          </View>
-        )}
-        <Icon 
-          name={expandedSections[section] ? 'chevron-up' : 'chevron-down'} 
-          size={14} 
-          color="#6b7280" 
-        />
-      </View>
-    </TouchableOpacity>
-  );
+  // CAPA Priority Data
+  const capaPriorityData = [
+    { name: 'High', value: 4, color: '#DC2626' },
+    { name: 'Medium', value: 6, color: '#F59E0B' },
+    { name: 'Low', value: 2, color: '#10B981' },
+  ];
 
-  // Location Filter Component
-  const LocationFilter = () => (
-    <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={false}
-      style={styles.filterScroll}
-      contentContainerStyle={styles.filterContainer}
-    >
-      {locations.map((location, index) => (
-        <TouchableOpacity
-          key={index}
-          style={[
-            styles.filterChip,
-            selectedLocation === location && styles.filterChipActive
-          ]}
-          onPress={() => setSelectedLocation(location)}
-        >
-          <Text style={[
-            styles.filterChipText,
-            selectedLocation === location && styles.filterChipTextActive
-          ]}>
-            {location}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
+  // Monthly Incident Trend Data
+  const monthlyIncidentData = [3, 2, 4, 2, 3, 4];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
-  // People Count Card Component
-  const PeopleCountCard = ({ location, data }) => (
-    <View style={styles.peopleCard}>
-      <View style={styles.peopleCardHeader}>
-        <Text style={styles.peopleCardTitle}>{location}</Text>
-        <View style={[styles.peopleBadge, { backgroundColor: '#11269C20' }]}>
-          <Icon name="users" size={10} color="#11269C" />
-          <Text style={styles.peopleBadgeText}>{data.peopleCount}</Text>
-        </View>
-      </View>
-      <Text style={styles.peopleSupervisor}>
-        <Icon name="user-tie" size={10} color="#6b7280" /> {data.supervisor}
-      </Text>
-      <View style={styles.peopleStats}>
-        <View style={styles.peopleStat}>
-          <Text style={styles.peopleStatValue}>{data.active}</Text>
-          <Text style={styles.peopleStatLabel}>Active</Text>
-        </View>
-        <View style={styles.peopleStat}>
-          <Text style={styles.peopleStatValue}>{data.pending}</Text>
-          <Text style={styles.peopleStatLabel}>Pending</Text>
-        </View>
-        <View style={styles.peopleStat}>
-          <Text style={styles.peopleStatValue}>{data.completed}</Text>
-          <Text style={styles.peopleStatLabel}>Completed</Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  // Handle stat card press with navigation
-  const handleStatPress = useCallback((route) => {
-    if (route) {
-      navigation.navigate(route);
-    }
-  }, [navigation]);
-
-  // Handle back press
   const handleBackPress = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
+
+  // Work Types Stacked Bar Chart
+  const WorkTypesStackedBar = () => {
+    const maxValue = 8;
+    
+    return (
+      <View style={styles.chartContainer}>
+        <Text style={styles.chartMainTitle}>Work Types by Location</Text>
+        <Text style={styles.yAxisLabel}>Number of PTWs</Text>
+        
+        <View style={styles.chartArea}>
+          <View style={styles.yAxis}>
+            <Text style={styles.yAxisText}>8</Text>
+            <Text style={styles.yAxisText}>6</Text>
+            <Text style={styles.yAxisText}>4</Text>
+            <Text style={styles.yAxisText}>2</Text>
+            <Text style={styles.yAxisText}>0</Text>
+          </View>
+          
+          <View style={styles.chartGrid}>
+            <View style={styles.gridLines}>
+              <View style={styles.gridLine} />
+              <View style={styles.gridLine} />
+              <View style={styles.gridLine} />
+              <View style={styles.gridLine} />
+              <View style={[styles.gridLine, styles.lastGridLine]} />
+            </View>
+            
+            <View style={styles.barsContainer}>
+              {workTypesByLocation.map((item, index) => (
+                <View key={index} style={styles.barColumn}>
+                  <View style={styles.stackedBar}>
+                    {item.others > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.others / maxValue) * 100}%`, backgroundColor: '#6B7280' }]} />
+                    )}
+                    {item.hazardous > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.hazardous / maxValue) * 100}%`, backgroundColor: '#8B5CF6' }]} />
+                    )}
+                    {item.confined > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.confined / maxValue) * 100}%`, backgroundColor: '#3B82F6' }]} />
+                    )}
+                    {item.electrical > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.electrical / maxValue) * 100}%`, backgroundColor: '#F59E0B' }]} />
+                    )}
+                    {item.heightWork > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.heightWork / maxValue) * 100}%`, backgroundColor: '#DC2626' }]} />
+                    )}
+                    {item.hotWork > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.hotWork / maxValue) * 100}%`, backgroundColor: '#FF6B35' }]} />
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+        
+        <View style={styles.xAxisContainer}>
+          {workTypesByLocation.map((item, index) => (
+            <Text key={index} style={styles.xAxisLabel} numberOfLines={2}>
+              {item.location.split(' - ')[0]}
+            </Text>
+          ))}
+        </View>
+        
+        <View style={styles.legendContainer}>
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#FF6B35' }]} />
+              <Text style={styles.legendText}>Hot Work</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#DC2626' }]} />
+              <Text style={styles.legendText}>Height Work</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#F59E0B' }]} />
+              <Text style={styles.legendText}>Electrical</Text>
+            </View>
+          </View>
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#3B82F6' }]} />
+              <Text style={styles.legendText}>Confined Space</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#8B5CF6' }]} />
+              <Text style={styles.legendText}>Hazardous</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#6B7280' }]} />
+              <Text style={styles.legendText}>Others</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // PTW Status Stacked Bar Chart
+  const StatusStackedBar = () => {
+    const maxValue = 8;
+    
+    return (
+      <View style={styles.chartContainer}>
+        <Text style={styles.chartMainTitle}>PTW Status by Location</Text>
+        <Text style={styles.yAxisLabel}>Number of PTWs</Text>
+        
+        <View style={styles.chartArea}>
+          <View style={styles.yAxis}>
+            <Text style={styles.yAxisText}>8</Text>
+            <Text style={styles.yAxisText}>6</Text>
+            <Text style={styles.yAxisText}>4</Text>
+            <Text style={styles.yAxisText}>2</Text>
+            <Text style={styles.yAxisText}>0</Text>
+          </View>
+          
+          <View style={styles.chartGrid}>
+            <View style={styles.gridLines}>
+              <View style={styles.gridLine} />
+              <View style={styles.gridLine} />
+              <View style={styles.gridLine} />
+              <View style={styles.gridLine} />
+              <View style={[styles.gridLine, styles.lastGridLine]} />
+            </View>
+            
+            <View style={styles.barsContainer}>
+              {statusByLocation.map((item, index) => (
+                <View key={index} style={styles.barColumn}>
+                  <View style={styles.stackedBar}>
+                    {item.cancelled > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.cancelled / maxValue) * 100}%`, backgroundColor: '#DC2626' }]} />
+                    )}
+                    {item.completed > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.completed / maxValue) * 100}%`, backgroundColor: '#3B82F6' }]} />
+                    )}
+                    {item.pending > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.pending / maxValue) * 100}%`, backgroundColor: '#F59E0B' }]} />
+                    )}
+                    {item.active > 0 && (
+                      <View style={[styles.barSegment, { height: `${(item.active / maxValue) * 100}%`, backgroundColor: '#10B981' }]} />
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+        
+        <View style={styles.xAxisContainer}>
+          {statusByLocation.map((item, index) => (
+            <Text key={index} style={styles.xAxisLabel} numberOfLines={2}>
+              {item.location.split(' - ')[0]}
+            </Text>
+          ))}
+        </View>
+        
+        <View style={styles.legendContainer}>
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#10B981' }]} />
+              <Text style={styles.legendText}>Active</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#F59E0B' }]} />
+              <Text style={styles.legendText}>Pending</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#3B82F6' }]} />
+              <Text style={styles.legendText}>Completed</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: '#DC2626' }]} />
+              <Text style={styles.legendText}>Cancelled</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+// Chemical Hazard Chart - With properly aligned Y-axis and consistent spacing
+const ChemicalHazardChart = () => {
+  const maxValue = 12;
+  const chemicalHazardData = [
+    { name: 'Flammable', value: 12, color: '#FF6B35' },
+    { name: 'Toxic', value: 8, color: '#DC2626' },
+    { name: 'Corrosive', value: 10, color: '#F59E0B' },
+    { name: 'Oxidizing', value: 5, color: '#3B82F6' },
+    { name: 'Explosive', value: 3, color: '#8B5CF6' },
+    { name: 'Other', value: 7, color: '#6B7280' },
+  ];
+  
+  // Generate Y-axis values from 0 to maxValue with equal steps
+  const yAxisValues = [12, 10, 8, 6, 4, 2, 0];
+  
+  return (
+    <View style={styles.chemicalCard}>
+      <Text style={styles.chemicalTitle}>Chemical Inventory by Hazard Class</Text>
+      
+      {/* Chart container with Y-axis */}
+      <View style={styles.chemicalChartContainer}>
+        {/* Y-axis labels with consistent spacing */}
+        <View style={styles.chemicalYAxis}>
+          {yAxisValues.map((value, index) => (
+            <Text key={index} style={styles.chemicalYAxisText}>{value}</Text>
+          ))}
+        </View>
+        
+        {/* Bars and grid */}
+        <View style={styles.chemicalBarsArea}>
+          {/* Grid lines - exactly matching Y-axis positions */}
+          <View style={styles.chemicalGridContainer}>
+            {yAxisValues.map((_, index) => (
+              <View key={index} style={styles.chemicalGridLine} />
+            ))}
+          </View>
+          
+          {/* Bars with labels */}
+          <View style={styles.chemicalBarsWrapper}>
+            {chemicalHazardData.map((item, index) => (
+              <View key={index} style={styles.chemicalBarColumn}>
+                <View style={styles.chemicalBarContainer}>
+                  <View 
+                    style={[
+                      styles.chemicalBarFill, 
+                      { 
+                        height: `${(item.value / maxValue) * 100}%`,
+                        backgroundColor: item.color 
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.chemicalBarLabel}>{item.name}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+      
+      {/* X-axis title */}
+      <Text style={styles.chemicalXAxisTitle}>Hazard Class</Text>
+      
+      {/* Color boxes legend */}
+      <View style={styles.chemicalLegend}>
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColorBox, { backgroundColor: '#FF6B35' }]} />
+            <Text style={styles.legendText}>Flammable</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColorBox, { backgroundColor: '#DC2626' }]} />
+            <Text style={styles.legendText}>Toxic</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColorBox, { backgroundColor: '#F59E0B' }]} />
+            <Text style={styles.legendText}>Corrosive</Text>
+          </View>
+        </View>
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColorBox, { backgroundColor: '#3B82F6' }]} />
+            <Text style={styles.legendText}>Oxidizing</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColorBox, { backgroundColor: '#8B5CF6' }]} />
+            <Text style={styles.legendText}>Explosive</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColorBox, { backgroundColor: '#6B7280' }]} />
+            <Text style={styles.legendText}>Other</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Chemical Location Chart - Fixed positioning with proper spacing
+const ChemicalLocationChart = () => {
+  const maxValue = 18;
+  const chemicalLocationData = [
+    { name: 'Lab-01', value: 15, color: '#10B981' },
+    { name: 'Lab-02', value: 12, color: '#3B82F6' },
+    { name: 'Storage-03', value: 18, color: '#F59E0B' },
+  ];
+  
+  // Generate Y-axis values from 0 to maxValue with equal steps
+  const yAxisValues = [18, 16, 14, 12, 10, 8, 6, 4, 2, 0];
+  
+  return (
+    <View style={styles.chemicalCard}>
+      <Text style={styles.chemicalTitle}>Chemicals by Storage Location</Text>
+      
+      {/* Chart container with proper spacing */}
+      <View style={styles.locationChartWrapper}>
+        {/* Y-axis values with consistent spacing */}
+        <View style={styles.locationYAxis}>
+          {yAxisValues.map((value, index) => (
+            <Text key={index} style={styles.locationYAxisText}>{value}</Text>
+          ))}
+        </View>
+        
+        {/* Bars and grid */}
+        <View style={styles.locationBarsArea}>
+          {/* Grid lines - exactly matching Y-axis positions */}
+          <View style={styles.locationGridContainer}>
+            {yAxisValues.map((_, index) => (
+              <View key={index} style={styles.locationGridLine} />
+            ))}
+          </View>
+          
+          {/* Bars */}
+          <View style={styles.locationBarsRow}>
+            {chemicalLocationData.map((item, index) => (
+              <View key={index} style={styles.locationBarColumn}>
+                <View 
+                  style={[
+                    styles.locationBar, 
+                    { 
+                      height: `${(item.value / maxValue) * 100}%`,
+                      backgroundColor: item.color 
+                    }
+                  ]} 
+                />
+                <Text style={styles.locationBarLabel}>{item.name}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+      
+      {/* X-axis title */}
+      <Text style={styles.locationXAxisTitle}>Storage Location</Text>
+    </View>
+  );
+};
+
+  // Gauge Chart Component
+  const GaugeChart = ({ percentage }) => (
+    <View style={styles.gaugeContainer}>
+      <View style={styles.gaugeWrapper}>
+        <View style={[styles.gaugeFill, { width: `${percentage}%` }]} />
+      </View>
+      <Text style={styles.gaugeValue}>{percentage}% Completed</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -472,495 +589,393 @@ const SafetyDashboard = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-            <Icon name="arrow-left" size={20} color="#f0f1f5" />
+            <Icon name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Safety Dashboard</Text>
           <View style={styles.dateTag}>
             <Icon name="calendar-check" size={12} color="#11269C" />
-            <Text style={styles.dateText}>{currentDate}</Text>
+            <Text style={styles.dateText}>13 FEB 2026</Text>
           </View>
         </View>
 
-        {/* Stats Grid with Navigation */}
+        {/* Stats Cards */}
         <View style={styles.statsGrid}>
           {statsData.map((stat) => (
-            <TouchableOpacity 
-              key={stat.id} 
-              style={[
-                styles.statCard,
-                { 
-                  backgroundColor: '#fff',
-                  borderLeftWidth: 4,
-                  borderLeftColor: stat.color,
-                }
-              ]}
-              activeOpacity={0.7}
-              onPress={() => handleStatPress(stat.route)}
-            >
+            <View key={stat.id} style={styles.statCard}>
               <View style={[styles.statIcon, { backgroundColor: stat.bgColor }]}>
-                <Icon name={stat.icon} size={isSmallScreen ? 20 : 24} color={stat.color} />
+                <Icon name={stat.icon} size={24} color={stat.color} />
               </View>
-              <View style={styles.statInfo}>
+              <View style={styles.statTextContainer}>
                 <Text style={styles.statNumber}>{stat.value}</Text>
                 <Text style={styles.statLabel}>{stat.title}</Text>
-                <View style={styles.statChangeContainer}>
-                  <Icon 
-                    name={stat.change.startsWith('+') ? 'arrow-up' : 'arrow-down'} 
-                    size={8} 
-                    color={stat.change.startsWith('+') ? '#10b981' : '#dc2626'} 
-                  />
-                  <Text style={[styles.statChange, { color: stat.change.startsWith('+') ? '#10b981' : '#dc2626' }]}>
-                    {stat.change}
-                  </Text>
-                </View>
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
 
-        {/* Location Filter */}
-        <LocationFilter />
+        {/* PTW Analytics Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            <Icon name="file-signature" size={18} color="#11269C" /> PTW Analytics
+          </Text>
 
-        {/* Charts - Only render when ready */}
-        {chartsReady && (
-          <Suspense fallback={<ChartLoader />}>
-            {/* PTW ANALYTICS SECTION */}
-            <View style={styles.sectionContainer}>
-              <SectionHeader 
-                title="PTW Analytics" 
-                icon="file-signature" 
-                badge={`${ptwData.total} Total`}
-                section="ptw"
-              />
-
-              {expandedSections.ptw && (
-                <>
-                  {/* Location Distribution Cards */}
-                  <Text style={styles.subSectionTitle}>Location Overview</Text>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.peopleScroll}
-                  >
-                    {Object.keys(ptwData.locations).map((loc, index) => (
-                      <PeopleCountCard key={index} location={loc} data={ptwData.locations[loc]} />
-                    ))}
-                  </ScrollView>
-
-                  {/* PTW Status Distribution */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Status Distribution</Text>
-                      <View style={styles.chartDot} />
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <PieChart
-                        data={ptwStatusPieData}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={chartConfig}
-                        accessor="population"
-                        paddingLeft="15"
-                        absolute
-                        hasLegend={false}
-                        backgroundColor="transparent"
-                      />
-                    </View>
-                    <View style={styles.chartFooter}>
-                      <Text style={styles.chartTotal}>Total: {ptwData.total}</Text>
-                      <View style={styles.legendContainer}>
-                        {ptwStatusPieData.map((item, index) => (
-                          <View key={index} style={styles.legendItem}>
-                            <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                            <Text style={styles.legendText}>{item.name}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Work Type Distribution */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Work Type Distribution</Text>
-                      <View style={[styles.chartDot, { backgroundColor: '#ff6b35' }]} />
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <PieChart
-                        data={workTypeData}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={chartConfig}
-                        accessor="population"
-                        paddingLeft="15"
-                        absolute
-                        hasLegend={false}
-                        backgroundColor="transparent"
-                      />
-                    </View>
-                    <View style={styles.chartFooter}>
-                      <View style={styles.legendContainer}>
-                        {workTypeData.map((item, index) => (
-                          <View key={index} style={styles.legendItem}>
-                            <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                            <Text style={styles.legendText}>{item.name}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Monthly Incident Trend */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Incident Trend</Text>
-                      <View style={[styles.chartDot, { backgroundColor: '#dc2626' }]} />
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <LineChart
-                        data={{
-                          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                          datasets: [{
-                            data: incidentData.monthly_trend,
-                            color: (opacity = 1) => `rgba(220, 38, 38, ${opacity})`,
-                            strokeWidth: 3,
-                          }],
-                        }}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={{
-                          ...chartConfig,
-                          color: (opacity = 1) => `rgba(220, 38, 38, ${opacity})`,
-                          fillShadowGradient: 'rgba(220, 38, 38, 0.1)',
-                          fillShadowGradientOpacity: 1,
-                        }}
-                        bezier
-                      />
-                    </View>
-                  </View>
-
-                  {/* PTW by Department */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>PTW by Department</Text>
-                      <View style={styles.chartDot} />
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <BarChart
-                        data={deptData}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={{
-                          ...chartConfig,
-                          color: (opacity = 1) => `rgba(17, 38, 156, ${opacity})`,
-                        }}
-                        fromZero
-                      />
-                    </View>
-                  </View>
-                </>
-              )}
+          {/* Location Distribution */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Location Distribution</Text>
+            <Text style={styles.cardSubtitle}>PTWs by Location</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <PieChart
+                  data={locationData}
+                  width={chartWidth}
+                  height={180}
+                  chartConfig={{
+                    ...chartConfig,
+                    color: (opacity = 1) => `rgba(17, 38, 156, ${opacity})`,
+                  }}
+                  accessor="value"
+                  paddingLeft="15"
+                  absolute
+                  backgroundColor="transparent"
+                />
+              </Suspense>
             </View>
-
-            {/* CHEMICAL SAFETY SECTION */}
-            <View style={styles.sectionContainer}>
-              <SectionHeader 
-                title="Chemical Safety" 
-                icon="flask" 
-                badge={`${chemicalData.active} Active`}
-                section="chemical"
-                color="#10b981"
-              />
-
-              {expandedSections.chemical && (
-                <>
-                  {/* Chemical Hazard Classification */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>By Hazard Class</Text>
-                      <View style={[styles.chartDot, { backgroundColor: '#ff6b35' }]} />
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <BarChart
-                        data={{
-                          labels: hazardData.map(d => d.name.substring(0, 4)),
-                          datasets: [{
-                            data: hazardData.map(d => d.population),
-                          }],
-                        }}
-                        width={width - 64}
-                        height={200}
-                        chartConfig={{
-                          ...chartConfig,
-                          color: (opacity = 1) => `rgba(255, 107, 53, ${opacity})`,
-                        }}
-                        fromZero
-                      />
-                    </View>
-                    <View style={styles.chartFooter}>
-                      <View style={styles.legendContainer}>
-                        {hazardData.slice(0, 3).map((item, index) => (
-                          <View key={index} style={styles.legendItem}>
-                            <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                            <Text style={styles.legendText}>{item.name}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Chemical Location Distribution */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>By Location</Text>
-                      <View style={[styles.chartDot, { backgroundColor: '#10b981' }]} />
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <BarChart
-                        data={locationData}
-                        width={width - 64}
-                        height={200}
-                        chartConfig={{
-                          ...chartConfig,
-                          color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-                        }}
-                        fromZero
-                      />
-                    </View>
-                  </View>
-
-                  {/* Chemical Status Summary */}
-                  <View style={styles.summaryCard}>
-                    <View style={styles.summaryItem}>
-                      <Text style={styles.summaryValue}>{chemicalData.active}</Text>
-                      <Text style={styles.summaryLabel}>Active</Text>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={styles.summaryItem}>
-                      <Text style={styles.summaryValue}>{chemicalData.expired}</Text>
-                      <Text style={styles.summaryLabel}>Expired</Text>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={styles.summaryItem}>
-                      <Text style={styles.summaryValue}>{chemicalData.disposed}</Text>
-                      <Text style={styles.summaryLabel}>Disposed</Text>
-                    </View>
-                  </View>
-                </>
-              )}
+            <View style={styles.locationList}>
+              {locationData.map((item, index) => (
+                <Text key={index} style={styles.locationText}>
+                  {item.value} {item.name}
+                </Text>
+              ))}
             </View>
+          </View>
 
-            {/* TRAINING SECTION */}
-            <View style={styles.sectionContainer}>
-              <SectionHeader 
-                title="Training" 
-                icon="graduation-cap" 
-                badge={`${trainingData.completion_rate}% Complete`}
-                section="training"
-                color="#3b82f6"
-              />
-
-              {expandedSections.training && (
-                <>
-                  {/* Training Completion Progress */}
-                  <View style={[styles.chartCard, styles.progressCard]}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Completion Progress</Text>
-                    </View>
-                    <View style={styles.progressContainer}>
-                      <View style={styles.progressStats}>
-                        <Text style={styles.progressStatValue}>{trainingData.completion_rate}%</Text>
-                        <Text style={styles.progressStatLabel}>Overall Completion</Text>
-                      </View>
-                      <ProgressBar progress={trainingData.completion_rate} color="#10b981" height={12} />
-                      <View style={styles.scoreContainer}>
-                        <Icon name="star" size={12} color="#f59e0b" />
-                        <Text style={styles.scoreText}>Avg Score: {trainingData.avg_score}%</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Course Status */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Course Status</Text>
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <PieChart
-                        data={trainingCourseData}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={chartConfig}
-                        accessor="population"
-                        paddingLeft="15"
-                        absolute
-                        backgroundColor="transparent"
-                      />
-                    </View>
-                    <View style={styles.courseStats}>
-                      {trainingCourseData.map((item, index) => (
-                        <View key={index} style={styles.courseStatItem}>
-                          <View style={[styles.courseDot, { backgroundColor: item.color }]} />
-                          <Text style={styles.courseStatText}>{item.name}: {item.population}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-
-                  {/* Monthly Completions */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Monthly Completions</Text>
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <BarChart
-                        data={{
-                          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                          datasets: [{
-                            data: trainingData.monthly_completions,
-                          }],
-                        }}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={{
-                          ...chartConfig,
-                          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                        }}
-                        fromZero
-                      />
-                    </View>
-                  </View>
-                </>
-              )}
+          {/* People Count & Supervisors */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>People Count & Supervisors</Text>
+            <Text style={styles.cardSubtitle}>Number of People</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <BarChart
+                  data={{
+                    labels: peopleCountData.map(item => item.location.split(' - ')[0]),
+                    datasets: [{ data: peopleCountData.map(item => item.count) }],
+                  }}
+                  width={chartWidth}
+                  height={220}
+                  chartConfig={{
+                    ...chartConfig,
+                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                  }}
+                  fromZero
+                  showValuesOnTopOfBars
+                  yAxisLabel=""
+                  yAxisSuffix=""
+                  segments={5}
+                />
+              </Suspense>
             </View>
-
-            {/* INCIDENT & CAPA SECTION */}
-            <View style={styles.sectionContainer}>
-              <SectionHeader 
-                title="Incident & CAPA" 
-                icon="exclamation-triangle" 
-                badge={`${incidentData.open} Open`}
-                section="incident"
-                color="#dc2626"
-              />
-
-              {expandedSections.incident && (
-                <>
-                  {/* Incident Types */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Incident Types</Text>
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <PieChart
-                        data={incidentTypeData}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={chartConfig}
-                        accessor="population"
-                        paddingLeft="15"
-                        absolute
-                        backgroundColor="transparent"
-                      />
-                    </View>
-                    <View style={styles.chartFooter}>
-                      <View style={styles.legendContainer}>
-                        {incidentTypeData.map((item, index) => (
-                          <View key={index} style={styles.legendItem}>
-                            <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                            <Text style={styles.legendText}>{item.name}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Incident Severity */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Severity Distribution</Text>
-                    </View>
-                    <View style={styles.severityContainer}>
-                      {Object.keys(incidentData.severity).map((key, index) => (
-                        <View key={key} style={styles.severityItem}>
-                          <View style={styles.severityHeader}>
-                            <Text style={styles.severityLabel}>{key}</Text>
-                            <Text style={[
-                              styles.severityValue,
-                              key === 'Critical' && styles.criticalText,
-                              key === 'Major' && styles.majorText,
-                            ]}>
-                              {incidentData.severity[key]}
-                            </Text>
-                          </View>
-                          <ProgressBar 
-                            progress={(incidentData.severity[key] / incidentData.total) * 100} 
-                            color={
-                              key === 'Critical' ? '#dc2626' :
-                              key === 'Major' ? '#f59e0b' :
-                              key === 'Minor' ? '#3b82f6' : '#10b981'
-                            }
-                            height={6}
-                            showPercentage={false}
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-
-                  {/* CAPA Priority */}
-                  <View style={styles.chartCard}>
-                    <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>CAPA by Priority</Text>
-                    </View>
-                    <View style={styles.canvasContainer}>
-                      <BarChart
-                        data={capaPriorityData}
-                        width={width - 64}
-                        height={180}
-                        chartConfig={{
-                          ...chartConfig,
-                          color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`,
-                        }}
-                        fromZero
-                      />
-                    </View>
-                  </View>
-
-                  {/* CAPA Status Summary */}
-                  <View style={styles.summaryCard}>
-                    <View style={styles.summaryItem}>
-                      <Text style={styles.summaryValue}>{capaData.pending}</Text>
-                      <Text style={styles.summaryLabel}>Pending</Text>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={styles.summaryItem}>
-                      <Text style={styles.summaryValue}>{capaData.verification}</Text>
-                      <Text style={styles.summaryLabel}>Verification</Text>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={styles.summaryItem}>
-                      <Text style={styles.summaryValue}>{capaData.closed}</Text>
-                      <Text style={styles.summaryLabel}>Closed</Text>
-                    </View>
-                  </View>
-                </>
-              )}
+            <View style={styles.locationList}>
+              {peopleCountData.map((item, index) => (
+                <Text key={index} style={styles.locationText}>{item.location}</Text>
+              ))}
             </View>
-          </Suspense>
-        )}
+          </View>
 
-        {/* Bottom Padding */}
+          {/* PTW Status Distribution */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>PTW Status Distribution</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <PieChart
+                  data={ptwStatusData}
+                  width={chartWidth}
+                  height={180}
+                  chartConfig={chartConfig}
+                  accessor="value"
+                  paddingLeft="15"
+                  absolute
+                  backgroundColor="transparent"
+                />
+              </Suspense>
+            </View>
+            <Text style={styles.totalText}>Total: 24</Text>
+            <View style={styles.legendRow}>
+              {ptwStatusData.map((item, index) => (
+                <View key={index} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                  <Text style={styles.legendText}>{item.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Work Types by Location */}
+          <WorkTypesStackedBar />
+
+          {/* PTW Status by Location */}
+          <StatusStackedBar />
+
+          {/* Work Type Distribution */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Work Type Distribution</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <PieChart
+                  data={workTypesData}
+                  width={chartWidth}
+                  height={180}
+                  chartConfig={chartConfig}
+                  accessor="value"
+                  paddingLeft="15"
+                  absolute
+                  backgroundColor="transparent"
+                />
+              </Suspense>
+            </View>
+            <View style={styles.workTypesGrid}>
+              {workTypesData.map((item, index) => (
+                <View key={index} style={styles.workTypeItem}>
+                  <View style={[styles.workTypeDot, { backgroundColor: item.color }]} />
+                  <Text style={styles.workTypeText}>{item.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Monthly Incident Trend */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Monthly Incident Trend</Text>
+            <View style={styles.monthLabels}>
+              {months.map((month, index) => (
+                <Text key={index} style={styles.monthLabel}>{month}</Text>
+              ))}
+            </View>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <LineChart
+                  data={{
+                    labels: months,
+                    datasets: [{
+                      data: monthlyIncidentData,
+                      color: (opacity = 1) => `rgba(220, 38, 38, ${opacity})`,
+                      strokeWidth: 3,
+                    }],
+                  }}
+                  width={chartWidth}
+                  height={200}
+                  chartConfig={{
+                    ...chartConfig,
+                    color: (opacity = 1) => `rgba(220, 38, 38, ${opacity})`,
+                  }}
+                  bezier
+                  withDots={true}
+                  withShadow={true}
+                />
+              </Suspense>
+            </View>
+          </View>
+        </View>
+
+        {/* Chemical Safety Analytics - UPDATED to match screenshot exactly */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            <Icon name="flask" size={18} color="#10B981" /> Chemical Safety Analytics
+          </Text>
+
+          {/* Chemical Inventory by Hazard Class */}
+          <ChemicalHazardChart />
+
+          {/* Chemicals by Storage Location */}
+          <ChemicalLocationChart />
+        </View>
+
+        {/* Training Analytics */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            <Icon name="graduation-cap" size={18} color="#3B82F6" /> Training Analytics
+          </Text>
+
+          {/* Training Completion */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Training Completion</Text>
+            <GaugeChart percentage={trainingCompletion} />
+          </View>
+
+          {/* Course Status */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Course Status</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <PieChart
+                  data={courseStatusData}
+                  width={chartWidth}
+                  height={180}
+                  chartConfig={chartConfig}
+                  accessor="value"
+                  paddingLeft="15"
+                  absolute
+                  backgroundColor="transparent"
+                />
+              </Suspense>
+            </View>
+            <View style={styles.legendRow}>
+              {courseStatusData.map((item, index) => (
+                <View key={index} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                  <Text style={styles.legendText}>{item.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Monthly Completions */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Monthly Completions</Text>
+            <View style={styles.monthLabels}>
+              {months.map((month, index) => (
+                <Text key={index} style={styles.monthLabel}>{month}</Text>
+              ))}
+            </View>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <BarChart
+                  data={{
+                    labels: months,
+                    datasets: [{ data: monthlyCompletions }],
+                  }}
+                  width={chartWidth}
+                  height={200}
+                  chartConfig={{
+                    ...chartConfig,
+                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                  }}
+                  fromZero
+                  showValuesOnTopOfBars
+                />
+              </Suspense>
+            </View>
+          </View>
+        </View>
+
+        {/* Department & Incident Analysis */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            <Icon name="hard-hat" size={18} color="#DC2626" /> Department & Incident Analysis
+          </Text>
+
+          {/* PTW by Department */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>PTW by Department</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <BarChart
+                  data={{
+                    labels: departmentData.map(item => item.name),
+                    datasets: [{ data: departmentData.map(item => item.value) }],
+                  }}
+                  width={chartWidth}
+                  height={200}
+                  chartConfig={{
+                    ...chartConfig,
+                    color: (opacity = 1) => `rgba(17, 38, 156, ${opacity})`,
+                  }}
+                  fromZero
+                  showValuesOnTopOfBars
+                />
+              </Suspense>
+            </View>
+          </View>
+
+          {/* Incident Types */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Incident Types</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <PieChart
+                  data={incidentTypesData}
+                  width={chartWidth}
+                  height={180}
+                  chartConfig={chartConfig}
+                  accessor="value"
+                  paddingLeft="15"
+                  absolute
+                  backgroundColor="transparent"
+                />
+              </Suspense>
+            </View>
+            <View style={styles.incidentLegend}>
+              <View style={styles.legendRow}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#DC2626' }]} />
+                  <Text style={styles.legendText}>Injury</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+                  <Text style={styles.legendText}>Near Miss</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
+                  <Text style={styles.legendText}>Property Damage</Text>
+                </View>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+                  <Text style={styles.legendText}>Vehicle</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#8B5CF6' }]} />
+                  <Text style={styles.legendText}>Environmental</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* CAPA by Priority */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>CAPA by Priority</Text>
+            <View style={styles.chartWrapper}>
+              <Suspense fallback={<ChartLoader />}>
+                <BarChart
+                  data={{
+                    labels: capaPriorityData.map(item => item.name),
+                    datasets: [{ data: capaPriorityData.map(item => item.value) }],
+                  }}
+                  width={chartWidth}
+                  height={200}
+                  chartConfig={{
+                    ...chartConfig,
+                    color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`,
+                  }}
+                  fromZero
+                  showValuesOnTopOfBars
+                />
+              </Suspense>
+            </View>
+          </View>
+        </View>
+
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
+const chartConfig = {
+  backgroundColor: '#ffffff',
+  backgroundGradientFrom: '#ffffff',
+  backgroundGradientTo: '#ffffff',
+  decimalPlaces: 0,
+  color: (opacity = 1) => `rgba(17, 38, 156, ${opacity})`,
+  labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
+  style: { borderRadius: 16 },
+  propsForLabels: { fontSize: 10, fontWeight: '600' },
+};
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#F5F7FA',
   },
   container: {
     flex: 1,
@@ -971,55 +986,52 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 75,
-    backgroundColor: '#021476',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: 23,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    paddingTop:20,
+    paddingVertical: 16,
+    backgroundColor: '#021476',
   },
   backButton: {
-    borderRadius: 20,
-    marginLeft: 3,
+    padding: 8,
   },
   headerTitle: {
-    fontSize: isSmallScreen ? 18 : 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#f5f1f1',
+    color: '#fff',
+    flex: 1,
+    marginLeft: 8,
   },
   dateTag: {
-    backgroundColor: '#f3f4f8',
+    backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 40,
+    gap: 8,
   },
   dateText: {
-    color: '#021696',
-    fontSize: isSmallScreen ? 10 : 11,
-    fontWeight: '800',
+    color: '#11269C',
+    fontSize: 12,
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 12,
     marginTop: 20,
-    gap: 10,
+    gap: 12,
   },
   statCard: {
-    width: (width - 34) / 2,
+    width: (width - 36) / 2,
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1027,380 +1039,595 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 45,
+    height: 45,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
-  statInfo: {
+  statTextContainer: {
     flex: 1,
   },
   statNumber: {
-    fontSize: isSmallScreen ? 22 : 26,
-    fontWeight: '800',
-    color: '#111827',
-    lineHeight: isSmallScreen ? 28 : 32,
-  },
-  statLabel: {
-    fontSize: isSmallScreen ? 11 : 12,
-    color: '#6b7280',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000',
+    lineHeight: 32,
     marginBottom: 2,
   },
-  statChangeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statChange: {
+  statLabel: {
     fontSize: 11,
-    fontWeight: '700',
-  },
-  filterScroll: {
-    marginTop: 16,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingRight: 16,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  filterChipActive: {
-    backgroundColor: '#11269C',
-    borderColor: '#11269C',
-  },
-  filterChipText: {
-    fontSize: 13,
+    color: '#6B7280',
     fontWeight: '600',
-    color: '#4b5563',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  filterChipTextActive: {
-    color: '#fff',
-  },
-  sectionContainer: {
+  section: {
     paddingHorizontal: 16,
     marginTop: 24,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
-  },
-  subSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  sectionBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  sectionBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  peopleScroll: {
+    color: '#000',
     marginBottom: 16,
   },
-  peopleCard: {
+  card: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginRight: 12,
-    width: 220,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    marginBottom: 16,
   },
-  peopleCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  peopleCardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
-  peopleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  peopleBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#11269C',
-  },
-  peopleSupervisor: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 12,
-  },
-  peopleStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  peopleStat: {
-    alignItems: 'center',
-  },
-  peopleStatValue: {
+  cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: '#000',
+    marginBottom: 12,
   },
-  peopleStatLabel: {
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationList: {
+    marginTop: 12,
+  },
+  locationText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+    marginVertical: 2,
+  },
+  totalText: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#11269C',
+    marginVertical: 8,
+  },
+  // Chart Styles for Stacked Bars
+  chartContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+  chartMainTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  yAxisLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+    marginLeft: 30,
+  },
+  chartArea: {
+    flexDirection: 'row',
+    height: 200,
+    marginBottom: 10,
+  },
+  yAxis: {
+    width: 30,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingRight: 8,
+  },
+  yAxisText: {
     fontSize: 10,
-    color: '#6b7280',
+    color: '#6B7280',
     fontWeight: '500',
   },
-  chartCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: 16,
-  },
-  progressCard: {
-    minHeight: 100,
-  },
-  chartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  chartTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  chartDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#11269C',
-  },
-  canvasContainer: {
+  chartGrid: {
+    flex: 1,
     position: 'relative',
-    height: 180,
+  },
+  gridLines: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+  },
+  gridLine: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
     width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  chartFooter: {
-    marginTop: 10,
+  lastGridLine: {
+    backgroundColor: '#D1D5DB',
   },
-  chartTotal: {
+  barsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    height: '100%',
+    paddingHorizontal: 5,
+  },
+  barColumn: {
+    width: 40,
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  stackedBar: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'flex-end',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  barSegment: {
+    width: '100%',
+  },
+  xAxisContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 8,
+    paddingHorizontal: 10,
+  },
+  xAxisLabel: {
+    width: 60,
+    fontSize: 9,
+    color: '#374151',
     textAlign: 'center',
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#11269C',
-    marginBottom: 6,
+    fontWeight: '500',
   },
   legendContainer: {
+    marginTop: 20,
+  },
+  legendRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 10,
+    flexWrap: 'wrap',
+    marginVertical: 2,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    marginHorizontal: 8,
+    marginVertical: 2,
   },
   legendColor: {
-    width: 10,
-    height: 10,
-    borderRadius: 3,
+    width: 12,
+    height: 12,
+    borderRadius: 2,
+    marginRight: 4,
   },
   legendText: {
     fontSize: 10,
-    color: '#6b7280',
+    color: '#6B7280',
     fontWeight: '500',
   },
-  // Progress Bar Styles
-  progressContainer: {
-    paddingVertical: 8,
-  },
-  progressStats: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  progressStatValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#11269C',
-  },
-  progressStatLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  progressBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  progressBar: {
-    flex: 1,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 10,
-  },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#11269C',
-    minWidth: 40,
-  },
-  courseStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 16,
-  },
-  courseStatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  courseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  courseStatText: {
-    fontSize: 11,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  severityContainer: {
-    gap: 12,
-  },
-  severityItem: {
-    marginBottom: 8,
-  },
-  severityHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  severityLabel: {
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '600',
-  },
-  severityValue: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  criticalText: {
-    color: '#dc2626',
-  },
-  majorText: {
-    color: '#f59e0b',
-  },
-  summaryCard: {
+  // Chemical Chart Styles - EXACT match
+  chemicalCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E5E7EB',
     marginBottom: 16,
   },
-  summaryItem: {
-    alignItems: 'center',
+  chemicalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 16,
   },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#11269C',
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: '#6b7280',
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  summaryDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#e5e7eb',
-  },
-  scoreContainer: {
+  chemicalBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    marginVertical: 6,
   },
-  scoreText: {
+  chemicalLabel: {
+    width: 80,
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  chemicalBarTrack: {
+    flex: 1,
+    height: 24,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginHorizontal: 8,
+  },
+  chemicalBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  chemicalValue: {
+    width: 25,
     fontSize: 12,
     color: '#374151',
     fontWeight: '600',
+    textAlign: 'right',
+  },
+  chemicalScaleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 88,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  chemicalScaleNum: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  chemicalLegend: {
+    marginTop: 8,
+  },
+  // Location Chart Styles - Vertical bars
+  locationChartArea: {
+    flexDirection: 'row',
+    height: 220,
+    marginTop: 10,
+  },
+  locationYAxis: {
+    width: 30,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingRight: 8,
+  },
+  locationYAxisText: {
+    fontSize: 9,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  locationBarsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    position: 'relative',
+  },
+  locationGridLines: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+  },
+  locationGridLine: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    width: '100%',
+  },
+  locationBarColumn: {
+    width: 50,
+    alignItems: 'center',
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  locationBar: {
+    width: 30,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  locationBarLabel: {
+    fontSize: 10,
+    color: '#374151',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  // Work Types Grid
+  workTypesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+  },
+  workTypeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '50%',
+    marginBottom: 6,
+  },
+  workTypeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    marginRight: 6,
+  },
+  workTypeText: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  // Month Labels
+  monthLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  monthLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  // Gauge Styles
+  gaugeContainer: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  gaugeWrapper: {
+    width: '100%',
+    height: 24,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  gaugeFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+  },
+  gaugeValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#11269C',
+  },
+  incidentLegend: {
+    marginTop: 12,
   },
   chartLoader: {
     height: 200,
     justifyContent: 'center',
     alignItems: 'center',
   },
-});
+// Chemical Chart Styles - Completely fixed and consolidated
+chemicalCard: {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 16,
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+  marginBottom: 16,
+},
+chemicalTitle: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#000',
+  marginBottom: 20,
+},
+// Main chart container with Y-axis and bars
+chemicalChartContainer: {
+  flexDirection: 'row',
+  height: 220,
+  marginBottom: 10,
+},
+// Y-axis styles
+chemicalYAxis: {
+  width: 35,
+  height: 200,
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+  paddingRight: 8,
+  marginTop: 0,
+},
+chemicalYAxisText: {
+  fontSize: 10,
+  color: '#6B7280',
+  fontWeight: '500',
+  textAlign: 'right',
+  lineHeight: 20, // This creates even spacing
+  height: 20, // Fixed height for each label
+},
+// Bars area with grid
+chemicalBarsArea: {
+  flex: 1,
+  position: 'relative',
+  height: 200,
+},
+// Grid lines container
+chemicalGridContainer: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  height: 200,
+  justifyContent: 'space-between',
+},
+chemicalGridLine: {
+  height: 1,
+  backgroundColor: '#E5E7EB',
+  width: '100%',
+},
+// Bars wrapper
+chemicalBarsWrapper: {
+  flexDirection: 'row',
+  justifyContent: 'space-around',
+  alignItems: 'flex-end',
+  height: 200,
+  paddingHorizontal: 5,
+},
+// Individual bar column
+chemicalBarColumn: {
+  width: 45,
+  alignItems: 'center',
+  height: 200,
+  justifyContent: 'flex-end',
+},
+// Bar container
+chemicalBarContainer: {
+  width: 30,
+  height: 180, // Leave room for labels
+  justifyContent: 'flex-end',
+  marginBottom: 0, // Space for label
+},
+// Bar fill
+chemicalBarFill: {
+  width: '100%',
+  borderRadius: 4,
+},
+// Bar label
+chemicalBarLabel: {
+  fontSize: 10,
+  color: '#374151',
+  fontWeight: '500',
+  textAlign: 'center',
+  marginTop: 5,
+  width: 60,
+  position: 'absolute',
+  bottom: -20,
+  left: -7,
+},
+// X-axis title
+chemicalXAxisTitle: {
+  fontSize: 11,
+  color: '#6B7280',
+  fontWeight: '500',
+  textAlign: 'center',
+  marginTop: 10,
+  marginBottom: 15,
+},
+// Legend styles
+chemicalLegend: {
+  marginTop: 16,
+  paddingTop: 12,
+  borderTopWidth: 1,
+  borderTopColor: '#E5E7EB',
+},
+legendColorBox: {
+  width: 14,
+  height: 14,
+  borderRadius: 3,
+  marginRight: 6,
+},
+legendRow: {
+  flexDirection: 'row',
+  justifyContent: 'center',
+  flexWrap: 'wrap',
+  marginVertical: 2,
+},
+legendItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginHorizontal: 8,
+  marginVertical: 2,
+},
+legendText: {
+  fontSize: 10,
+  color: '#6B7280',
+  fontWeight: '500',
+},
 
+// Location Chart Styles - Fixed positioning with proper spacing
+locationChartWrapper: {
+  flexDirection: 'row',
+  height: 220,
+  marginTop: 10,
+  marginBottom: 10,
+},
+locationYAxis: {
+  width: 35,
+  height: 200,
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+  paddingRight: 8,
+},
+locationYAxisText: {
+  fontSize: 10,
+  color: '#6B7280',
+  fontWeight: '500',
+  textAlign: 'right',
+  lineHeight: 20,
+  height: 20,
+},
+locationBarsArea: {
+  flex: 1,
+  position: 'relative',
+  height: 200,
+},
+locationGridContainer: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  height: 200,
+  justifyContent: 'space-between',
+},
+locationGridLine: {
+  height: 1,
+  backgroundColor: '#E5E7EB',
+  width: '100%',
+},
+locationBarsRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-around',
+  alignItems: 'flex-end',
+  height: 200,
+  paddingHorizontal: 5,
+},
+locationBarColumn: {
+  width: 60,
+  alignItems: 'center',
+  height: 200,
+  justifyContent: 'flex-end',
+},
+locationBar: {
+  width: 35,
+  borderRadius: 4,
+  marginBottom: 0, // Space for label
+},
+locationBarLabel: {
+  fontSize: 10,
+  color: '#374151',
+  fontWeight: '500',
+  textAlign: 'center',
+  marginTop: 5,
+  position: 'absolute',
+  bottom: -20,
+  width: 60,
+},
+locationXAxisTitle: {
+  fontSize: 11,
+  color: '#6B7280',
+  fontWeight: '500',
+  textAlign: 'center',
+  marginTop: 5,
+},
+
+});
 export default SafetyDashboard;

@@ -1,5 +1,5 @@
 // src/screens/LoginScreen.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,67 +24,78 @@ const BG_IMAGE = require('../assets/factory.png');
 const LoginScreen = ({ navigation }) => {
   const { login, loading: authLoading } = useAuth();
   
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoDropdown, setShowDemoDropdown] = useState(false);
+  const [demoUsers, setDemoUsers] = useState([]);
 
-  // src/screens/LoginScreen.jsx - Add this in handleLogin function
+  // Fetch demo users from backend or use predefined ones
+  useEffect(() => {
+    // You can either fetch from backend or keep predefined
+    // For now, keeping predefined but using email format
+    setDemoUsers([
+      { role: 'Admin', email: 'admin@esslepropack.com', password: 'admin123' },
+      { role: 'Safety Officer', email: 'safety@esslepropack.com', password: 'safety123' },
+      { role: 'Supervisor', email: 'supervisor@esslepropack.com', password: 'supervisor123' },
+      { role: 'Contractor', email: 'contractor@esslepropack.com', password: 'contractor123' },
+      { role: 'Worker', email: 'worker@esslepropack.com', password: 'worker123' },
+    ]);
+  }, []);
 
-const handleLogin = async () => {
-  if (!username.trim() || !password.trim()) {
-    setError('Please enter both username and password');
-    return;
-  }
-
-  setIsLoading(true);
-  setError('');
-
-  try {
-    console.log('🔐 LOGIN ATTEMPT START');
-    console.log('Username entered:', username);
-    console.log('Password entered:', password);
-    console.log('Remember me:', rememberMe);
-    
-    const result = await login(username, password, rememberMe);
-    
-    console.log('🔐 LOGIN RESULT:', result);
-    
-    if (result.success) {
-      console.log('✅ Login successful! User role:', result.user.role);
-      console.log('✅ User data:', JSON.stringify(result.user, null, 2));
-    } else {
-      console.log('❌ Login failed:', result.error);
-      setError(result.error || 'Invalid credentials');
+  const handleLogin = async () => {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password');
+      return;
     }
-  } catch (err) {
-    console.error('💥 Login error:', err);
-    setError('Login failed. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      console.log('🔐 LOGIN ATTEMPT START');
+      console.log('Email entered:', email);
+      console.log('Password entered:', password);
+      console.log('Remember me:', rememberMe);
+      
+      const result = await login(email, password, rememberMe);
+      
+      console.log('🔐 LOGIN RESULT:', result);
+      
+      if (result.success) {
+        console.log('✅ Login successful! User role:', result.user.role_name);
+        console.log('✅ User data:', JSON.stringify(result.user, null, 2));
+        // Navigation will be handled automatically by App.js
+      } else {
+        console.log('❌ Login failed:', result.error);
+        setError(result.error || 'Invalid credentials');
+      }
+    } catch (err) {
+      console.error('💥 Login error:', err);
+      setError('Login failed. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fillDemoCredentials = (demoUser) => {
     console.log('Filling demo credentials for:', demoUser.role);
-    setUsername(demoUser.username);
+    setEmail(demoUser.email);
     setPassword(demoUser.password);
     setShowDemoDropdown(false);
     // Clear any previous error
     setError('');
   };
-
-  // Demo users for quick login
-  const demoUsers = [
-    { role: 'Admin', username: 'admin', password: 'admin123' },
-    { role: 'Safety Officer', username: 'safety', password: 'safety123' },
-    { role: 'Supervisor', username: 'supervisor', password: 'supervisor123' },
-    { role: 'Contractor', username: 'contractor', password: 'contractor123' },
-    { role: 'Worker', username: 'worker', password: 'worker123' },
-  ];
 
   return (
     <ImageBackground source={BG_IMAGE} style={styles.background} blurRadius={3}>
@@ -114,22 +125,24 @@ const handleLogin = async () => {
 
               {/* Input Fields */}
               <View style={styles.inputSection}>
-                {/* Username Field */}
+                {/* Email Field - Changed from Username */}
                 <View style={styles.inputWrapper}>
                   <View style={styles.iconContainer}>
-                    <Icon name="account" size={22} color="#062a72" />
+                    <Icon name="email" size={22} color="#062a72" />
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Username"
+                    placeholder="Email"
                     placeholderTextColor="#6886b0"
-                    value={username}
+                    value={email}
                     onChangeText={(text) => {
-                      setUsername(text);
+                      setEmail(text);
                       setError('');
                     }}
                     editable={!isLoading}
                     autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
                   />
                 </View>
 
@@ -201,7 +214,7 @@ const handleLogin = async () => {
                         </View>
                         <View style={styles.demoUserDetails}>
                           <Text style={styles.demoUserText}>
-                            <Text style={{ fontWeight: '600' }}>Username:</Text> {user.username}
+                            <Text style={{ fontWeight: '600' }}>Email:</Text> {user.email}
                           </Text>
                           <Text style={styles.demoUserText}>
                             <Text style={{ fontWeight: '600' }}>Password:</Text> {user.password}
@@ -239,6 +252,12 @@ const handleLogin = async () => {
                     </>
                   )}
                 </TouchableOpacity>
+
+                {/* Connection Status Indicator - Optional */}
+                <View style={styles.connectionStatus}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.statusText}>Connected to server</Text>
+                </View>
 
                 {/* Footer */}
                 <View style={styles.footer}>
@@ -473,8 +492,27 @@ const styles = StyleSheet.create({
   buttonIcon: {
     marginLeft: 10,
   },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4ade80',
+    marginRight: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+  },
   footer: {
-    marginTop: 32,
+    marginTop: 24,
     alignItems: 'center',
   },
   footerText: {

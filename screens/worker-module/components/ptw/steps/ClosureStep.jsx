@@ -252,10 +252,7 @@ const ClosureStep = ({ formData, setFormData, onComplete, canEdit, user }) => {
       Alert.alert('Validation Error', 'Closure date and time are required');
       return;
     }
-    if (!signature) {
-      Alert.alert('Validation Error', 'Authorized signature is required');
-      return;
-    }
+   
 
     const updatedData = { 
       ...formData, 
@@ -456,16 +453,6 @@ const ClosureStep = ({ formData, setFormData, onComplete, canEdit, user }) => {
             />
           </View>
 
-          <View style={stepStyles.inputGroup}>
-            <Text style={[stepStyles.inputLabel, { marginBottom: 8, color: COLORS.grey[800] }]}>
-              Authorized Signature <Text style={stepStyles.required}>*</Text>
-            </Text>
-            <SignaturePad 
-              onSave={(sig) => setSignature(sig)} 
-              disabled={!canEdit}
-              signature={signature}
-            />
-          </View>
         </View>
 
         <View style={stepStyles.stepActions}>

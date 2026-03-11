@@ -23,10 +23,6 @@ import IncidentReportScreen from './screens/worker-module/IncidentReportScreen';
 
 const Stack = createNativeStackNavigator();
 
-// Main App Content with Auth
-// src/App.jsx - Focus on the WorkerModuleEntry section
-
-// In your App.jsx, find where you create the wrapped screens and update the WorkerModuleEntry:
 
 const AppContent = () => {
   const { user, loading, logout } = useAuth();

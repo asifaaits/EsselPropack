@@ -41,7 +41,7 @@ export const DEMO_USERS = [
     password: 'admin123',
     role: ROLES.ADMIN,
     name: 'John',
-    email: 'admin@esselpropack.com',
+    email: 'admin@esslepropack.com',
     department: 'Management',
   },
   {
@@ -50,7 +50,7 @@ export const DEMO_USERS = [
     password: 'safety123',
     role: ROLES.SAFETY_OFFICER,
     name: 'David',
-    email: 'safety@esselpropack.com',
+    email: 'safety@esslepropack.com',
     department: 'Safety',
   },
   {
@@ -59,7 +59,7 @@ export const DEMO_USERS = [
     password: 'supervisor123',
     role: ROLES.SUPERVISOR,
     name: 'Sarah',
-    email: 'supervisor@esselpropack.com',
+    email: 'supervisor@esslepropack.com',
     department: 'Production',
   },
   {
@@ -68,7 +68,7 @@ export const DEMO_USERS = [
     password: 'contractor123',
     role: ROLES.CONTRACTOR,
     name: 'Mike',
-    email: 'contractor@esselpropack.com',
+    email: 'contractor@esslepropack.com',
     company: 'ABC Contractors',
   },
   {
@@ -77,7 +77,7 @@ export const DEMO_USERS = [
     password: 'worker123',
     role: ROLES.WORKER,
     name: 'John',
-    email: 'worker@esselpropack.com',
+    email: 'worker@esslepropack.com',
     department: 'Production',
   },
 ];

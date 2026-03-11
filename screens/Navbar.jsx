@@ -26,7 +26,7 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  
+
   // Get real user data from AuthContext
   const { user } = useAuth();
 
@@ -71,29 +71,26 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
   // Get user display name - handle different possible formats
   const getUserDisplayName = () => {
     if (!user) return 'Guest';
-    return user.name || user.username || user.email || 'User';
+    return user.s_full_name || user.name || user.username || 'User'; // ← add s_full_name
   };
 
   // Get user role with proper formatting
   const getUserRole = () => {
-    if (!user || !user.role) return 'User';
-    
-    // Format role string (e.g., "SUPERVISOR" -> "Supervisor")
-    const roleStr = user.role.toString();
+    if (!user || !user.role_name) return 'User';
+    const roleStr = user.role_name.toString();
     return roleStr.charAt(0).toUpperCase() + roleStr.slice(1).toLowerCase();
   };
-
   // Get user email
   const getUserEmail = () => {
     if (!user) return 'Not logged in';
-    return user.email || `${user.username || 'user'}@esselpropack.com`;
+    return user.s_email || user.email || 'No email'; // ← add s_email
   };
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
     const name = getUserDisplayName();
     if (name === 'Guest') return 'G';
-    
+
     const nameParts = name.split(' ');
     if (nameParts.length >= 2) {
       return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
@@ -105,15 +102,15 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={[styles.navbar, isHeaderHidden && styles.headerHidden]}>
         {/* Logo and Brand */}
-        <TouchableOpacity 
-          style={styles.brandContainer} 
+        <TouchableOpacity
+          style={styles.brandContainer}
           onPress={() => handleNavPress('Home')}
           activeOpacity={0.7}
         >
           <View style={styles.logoContainer}>
-            <Image 
-              source={ESSEL_LOGO} 
-              style={styles.logo} 
+            <Image
+              source={ESSEL_LOGO}
+              style={styles.logo}
               resizeMode="contain"
               onError={(e) => console.log('Logo load error:', e.nativeEvent.error)}
             />
@@ -126,9 +123,9 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
 
         {/* Desktop Navigation - Show on tablets and larger screens */}
         {width >= 768 && (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
             style={styles.navMenu}
             contentContainerStyle={styles.navMenuContent}
           >
@@ -187,10 +184,10 @@ const Navbar = ({ onLogout, isHeaderHidden, navigation }) => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.notificationIcon}>
-                    <Icon 
-                      name="circle" 
-                      size={8} 
-                      color={notification.read ? 'transparent' : '#11269C'} 
+                    <Icon
+                      name="circle"
+                      size={8}
+                      color={notification.read ? 'transparent' : '#11269C'}
                     />
                   </View>
                   <View style={styles.notificationContent}>

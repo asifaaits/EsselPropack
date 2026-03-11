@@ -77,8 +77,10 @@ export class PTWWorkflowService {
   static canEditPTW(user, ptw) {
     if (!user || !ptw) return false;
     
-    // Admin can edit everything
-    if (user.role === ROLES.ADMIN) return true;
+    // Admin can edit everything - ALWAYS RETURN TRUE FOR ADMIN
+    if (user.role === ROLES.ADMIN || user.role_name === ROLES.ADMIN) {
+      return true;
+    }
     
     // Check if PTW is still in progress
     if (ptw.workflow?.status !== "in_progress") return false;
@@ -90,14 +92,16 @@ export class PTWWorkflowService {
     const stepCompleted = ptw.workflow.steps[currentStep - 1]?.completed;
     
     // User can edit if they have the required role AND step is not completed
-    return (user.role === requiredRole && !stepCompleted);
+    return (user.role === requiredRole || user.role_name === requiredRole) && !stepCompleted;
   }
 
   static isStepAvailableForUser(user, stepNumber, ptw) {
     if (!user || !ptw) return false;
     
-    // Admin can access all steps
-    if (user.role === ROLES.ADMIN) return true;
+    // Admin can access all steps - ALWAYS RETURN TRUE FOR ADMIN
+    if (user.role === ROLES.ADMIN || user.role_name === ROLES.ADMIN) {
+      return true;
+    }
     
     // Check if the step is the current step in workflow
     if (stepNumber !== ptw.workflow?.currentStep) return false;
@@ -105,7 +109,7 @@ export class PTWWorkflowService {
     const requiredRole = this.stepRoles[stepNumber];
     
     // User must have the correct role for this step
-    if (user.role !== requiredRole) return false;
+    if (user.role !== requiredRole && user.role_name !== requiredRole) return false;
     
     // Step shouldn't be completed already
     if (ptw.workflow.steps[stepNumber - 1]?.completed) return false;
@@ -123,28 +127,48 @@ export class PTWWorkflowService {
     const stepIndex = stepNumber - 1;
     const now = new Date().toISOString();
 
+    // Get user name and role safely
+    const userName = user?.s_full_name || user?.name || user?.username || 'Unknown';
+    const userRole = user?.role_name || user?.role || 'Unknown';
+
     // Mark current step as completed
     updatedPTW.workflow.steps[stepIndex] = {
       ...updatedPTW.workflow.steps[stepIndex],
       completed: true,
-      completedBy: user?.name || user?.username || 'Unknown',
-      completedByRole: user?.role,
+      completedBy: userName,
+      completedByRole: userRole,
       completedAt: now,
       status: "completed",
       data: stepData,
       notes: notes,
     };
 
+    // Store step data in workflow stepData
+    if (!updatedPTW.workflow.stepData) {
+      updatedPTW.workflow.stepData = {};
+    }
     updatedPTW.workflow.stepData[stepNumber] = stepData;
+
+    // Update completed/pending steps arrays
+    if (!updatedPTW.workflow.completedSteps) {
+      updatedPTW.workflow.completedSteps = [];
+    }
     updatedPTW.workflow.completedSteps.push(stepNumber);
+    
+    if (!updatedPTW.workflow.pendingSteps) {
+      updatedPTW.workflow.pendingSteps = [];
+    }
     updatedPTW.workflow.pendingSteps = updatedPTW.workflow.pendingSteps.filter(s => s !== stepNumber);
 
     // Add to timeline
+    if (!updatedPTW.workflow.timeline) {
+      updatedPTW.workflow.timeline = [];
+    }
     updatedPTW.workflow.timeline.push({
       step: stepNumber,
       action: "completed",
-      by: user?.name || user?.username || 'Unknown',
-      byRole: user?.role,
+      by: userName,
+      byRole: userRole,
       at: now,
       note: notes || `Step ${stepNumber} completed`,
     });
@@ -167,19 +191,30 @@ export class PTWWorkflowService {
     } else {
       updatedPTW.workflow.status = "completed";
       updatedPTW.status = "completed";
+      
+      updatedPTW.workflow.timeline.push({
+        step: stepNumber,
+        action: "completed",
+        by: userName,
+        byRole: userRole,
+        at: now,
+        note: "Permit workflow completed",
+      });
     }
 
     // Update metadata
-    updatedPTW.workflow.metadata.lastModifiedBy = user?.name || user?.username || 'Unknown';
+    updatedPTW.workflow.metadata.lastModifiedBy = userName;
     updatedPTW.workflow.metadata.lastModifiedAt = now;
     updatedPTW.workflow.metadata.completionPercentage =
-      (updatedPTW.workflow.completedSteps.length / 10) * 100;
+      ((updatedPTW.workflow.completedSteps?.length || 0) / 10) * 100;
 
     return updatedPTW;
   }
 
   static getUserPendingActions(user, ptwList) {
     if (!user) return [];
+    
+    const userRole = user.role_name || user.role;
     
     return ptwList.filter(ptw => {
       // Only consider PTWs in progress
@@ -191,8 +226,13 @@ export class PTWWorkflowService {
       const requiredRole = this.stepRoles[currentStep];
       const stepCompleted = ptw.workflow.steps[currentStep - 1]?.completed;
       
-      // User has pending action if they have the required role AND step not completed
-      return (user.role === requiredRole && !stepCompleted);
+      // ADMIN has pending actions for ALL in-progress PTWs
+      if (userRole === ROLES.ADMIN) {
+        return !stepCompleted; // Admin can work on any incomplete step
+      }
+      
+      // Regular users: pending if they have the required role AND step not completed
+      return (userRole === requiredRole) && !stepCompleted;
     });
   }
 
@@ -232,5 +272,62 @@ export class PTWWorkflowService {
       completedBy: step.completedBy,
       completedAt: step.completedAt,
     }));
+  }
+  
+  // Add rejectStep method if needed
+  static rejectStep(ptw, stepNumber, user, reason) {
+    const updatedPTW = JSON.parse(JSON.stringify(ptw));
+    const stepIndex = stepNumber - 1;
+    const now = new Date().toISOString();
+    
+    const userName = user?.s_full_name || user?.name || user?.username || 'Unknown';
+    const userRole = user?.role_name || user?.role || 'Unknown';
+    
+    // Mark step as rejected (or you can go back to previous step)
+    updatedPTW.workflow.steps[stepIndex].status = "rejected";
+    updatedPTW.workflow.steps[stepIndex].notes = reason;
+    
+    // Move back to previous step
+    const prevStep = Math.max(1, stepNumber - 1);
+    updatedPTW.workflow.currentStep = prevStep;
+    updatedPTW.workflow.currentRole = this.stepRoles[prevStep];
+    
+    // Add to timeline
+    updatedPTW.workflow.timeline.push({
+      step: stepNumber,
+      action: "rejected",
+      by: userName,
+      byRole: userRole,
+      at: now,
+      note: reason,
+    });
+    
+    updatedPTW.workflow.metadata.lastModifiedBy = userName;
+    updatedPTW.workflow.metadata.lastModifiedAt = now;
+    
+    return updatedPTW;
+  }
+  
+  static cancelPTW(ptw, user, reason) {
+    const updatedPTW = JSON.parse(JSON.stringify(ptw));
+    const now = new Date().toISOString();
+    
+    const userName = user?.s_full_name || user?.name || user?.username || 'Unknown';
+    const userRole = user?.role_name || user?.role || 'Unknown';
+    
+    updatedPTW.status = "cancelled";
+    updatedPTW.workflow.status = "cancelled";
+    updatedPTW.cancellationReason = reason;
+    
+    updatedPTW.workflow.timeline.push({
+      step: updatedPTW.workflow.currentStep,
+      action: "cancelled",
+      by: userName,
+      byRole: userRole,
+      at: now,
+      note: reason,
+    });
+    
+    return updatedPTW;
   }
 }
